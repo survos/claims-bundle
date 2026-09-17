@@ -26,9 +26,11 @@ use Symfony\Component\Uid\Ulid;
  *
  * Rerun semantics: on record(), all existing DB claims AND the prior ClaimRun for
  * (scope, subjectType, subjectId, source) are removed first, then fresh ones are
- * persisted sharing one runId. claims.jsonl is append-only; supersession is resolved
- * by the sidecar index / reindex (latest wins per subject+predicate+source). The caller
- * decides when to flush the DB.
+ * persisted sharing one runId. claims.jsonl is append-only and only receives claims whose
+ * predicate+value the DB did not already hold for that subject+source, so a rerun that
+ * asserts nothing new appends nothing; changed values are appended and supersession is
+ * resolved by reading (latest wins per subject+predicate+source). The caller decides when
+ * to flush the DB.
  */
 final class ClaimIngestor
 {
@@ -169,7 +171,9 @@ final class ClaimIngestor
 
         // ── DB index (queryable; what claims:fetch reads): delete-then-insert ─────
         $staleClaims = $preloadedStaleClaims ?? $this->claims->findForSubjectAndSource($subjectType, $subjectId, $source, $scope);
+        $alreadyLogged = [];
         foreach ($staleClaims as $stale) {
+            $alreadyLogged[self::claimKey($stale->predicate, $stale->value)] = true;
             $this->em->remove($stale);
         }
         $staleRuns = $preloadedStaleRuns ?? $this->runs->findForSubjectAndSource($subjectType, $subjectId, $source, $scope);
@@ -212,11 +216,19 @@ final class ClaimIngestor
         // ── Vault JSONL mirror: best-effort. The DB (above) is the queryable store that
         // claims:fetch reads and can rebuild the JSONL from, so a vault this app doesn't own
         // (e.g. the central mediary service writing a dataset's vault) must not abort the claim.
+        // Append-only means new assertions only: a claim the DB already held for this
+        // (subject, source) with the same predicate+value is already in the log, so re-importing
+        // appends nothing. Without this every media:sync pass re-logged all @import claims
+        // (mus/fpus: 18,075 claims became 783,875 lines).
+        $newClaims = array_values(array_filter(
+            $rawClaims,
+            static fn (RawClaim $c): bool => !isset($alreadyLogged[self::claimKey($c->predicate, $c->value)]),
+        ));
         try {
             if ($sharedWriter !== null) {
-                $this->writeClaimsJsonl($sharedWriter, $scope, $subjectType, $subjectId, $source, $rawClaims, $runId);
+                $this->writeClaimsJsonl($sharedWriter, $scope, $subjectType, $subjectId, $source, $newClaims, $runId);
             } else {
-                $this->appendToClaimsJsonl($scope, $subjectType, $subjectId, $source, $rawClaims, $runId);
+                $this->appendToClaimsJsonl($scope, $subjectType, $subjectId, $source, $newClaims, $runId);
             }
         } catch (\Throwable $e) {
             $this->logger->warning('Claims persisted to DB but vault JSONL append failed for {scope}/{subject}: {err}', [
@@ -235,6 +247,25 @@ final class ClaimIngestor
         }
 
         return JsonlWriter::open($this->dataPaths->claimsFile($scope), 'a', JsonlWriterOptions::noLock());
+    }
+
+    /** Identity of a claim within one (scope, subjectType, subjectId, source): predicate + value. */
+    private static function claimKey(string $predicate, mixed $value): string
+    {
+        return $predicate . "\0" . json_encode(self::sortKeys($value), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
+    }
+
+    /** jsonb does not keep object key order, so a structured value read back from the DB must compare key-sorted. */
+    private static function sortKeys(mixed $value): mixed
+    {
+        if (!\is_array($value)) {
+            return $value;
+        }
+        if (!array_is_list($value)) {
+            ksort($value);
+        }
+
+        return array_map(self::sortKeys(...), $value);
     }
 
     /**
