@@ -60,6 +60,17 @@ final class ClaimProjector
         // ocrDocument() and YoutubeRawCommand both record this claim expecting enrich to carry it
         // onto the item, but SCALAR_MAP had no entry for it until now.
         Claim::PRED_OCR_TEXT        => 'ocrText',
+        // merit_score (ai-workflow-bundle): 0-100 per criterion onto BaseItemDto's numeric merit
+        // fields, so the folio grid can facet them as range sliders. Literal predicates because
+        // this bundle does not depend on ai-workflow-bundle, where the task defines them.
+        'merit:overall'                 => 'meritOverall',
+        'merit:action'                  => 'meritAction',
+        'merit:culturalPractice'        => 'meritCulturalPractice',
+        'merit:historicalSignificance'  => 'meritHistoricalSignificance',
+        'merit:captivates'              => 'meritCaptivates',
+        'merit:inTheAct'                => 'meritInTheAct',
+        'merit:quality'                 => 'meritQuality',
+        'merit:originality'             => 'meritOriginality',
     ];
 
     private const LIST_MAP = [
