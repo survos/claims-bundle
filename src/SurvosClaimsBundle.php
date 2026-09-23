@@ -6,6 +6,7 @@ namespace Survos\ClaimsBundle;
 
 use Survos\ClaimsBundle\Command\ClaimsExportCommand;
 use Survos\ClaimsBundle\Command\ClaimsFetchCommand;
+use Survos\ClaimsBundle\Command\ClaimsUsageCommand;
 use Survos\ClaimsBundle\Command\ClaimsImportCommand;
 use Survos\ClaimsBundle\Repository\ClaimRepository;
 use Survos\ClaimsBundle\Repository\ClaimRunRepository;
@@ -46,6 +47,22 @@ final class SurvosClaimsBundle extends AbstractBundle
                 ->arrayNode('list_predicates')
                     ->info('Predicates the aggregator projects as a list (keywords, places, etc.). Consumers register their own.')
                     ->scalarPrototype()->end()
+                    ->defaultValue([])
+                ->end()
+                ->arrayNode('model_rates')
+                    ->info('USD per 1M tokens per model, for claims:usage costing, e.g. "gpt-4o-mini": {input: 0.15, output: 0.60}. Rates are config, never hard-coded: they change, they differ per account, and a stale number printed as fact is worse than no number. Without an entry the command still reports tokens and simply leaves cost blank. Keys match ClaimRun::$model, which records the provider\'s own id ("gpt-4o-mini-2024-07-18"); a prefix match is used so an alias entry covers its dated versions.')
+                    ->useAttributeAsKey('model')
+                    // Model ids contain hyphens ("gpt-4o-mini"); Symfony's default key
+                    // normalisation rewrites them to underscores, so every lookup missed
+                    // and every cost column printed blank.
+                    ->normalizeKeys(false)
+                    ->arrayPrototype()
+                        ->children()
+                            ->floatNode('input')->defaultValue(0.0)->info('USD per 1M input tokens.')->end()
+                            ->floatNode('output')->defaultValue(0.0)->info('USD per 1M output tokens.')->end()
+                            ->floatNode('per_call')->defaultValue(0.0)->info('USD per call, for page/request-priced models (Mistral OCR) that report no tokens.')->end()
+                        ->end()
+                    ->end()
                     ->defaultValue([])
                 ->end()
                 ->enumNode('reader')
@@ -106,6 +123,12 @@ final class SurvosClaimsBundle extends AbstractBundle
         $services->set(ClaimsVaultWriter::class)
             ->arg('$dataPaths', service(DataPaths::class)->ignoreOnInvalid());
         $services->set(ClaimsFetchCommand::class);
+
+        // Reader-side like claims:fetch, so it works on reader-only consumers too: it reads
+        // claim_run straight off the claims connection rather than through the ORM.
+        $services->set(ClaimsUsageCommand::class)
+            ->arg('$claimsConnection', service('doctrine.dbal.claims_connection')->ignoreOnInvalid())
+            ->arg('$modelRates', $config['model_rates']);
         $services->set(ClaimProjector::class)->autowire()->autoconfigure();
         $services->set(SourceClaims::class);
         $services->set(ClaimConstantsExtension::class);
