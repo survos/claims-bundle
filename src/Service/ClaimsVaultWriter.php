@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Service;
 
-use Survos\DatasetBundle\Service\DataPaths;
+use Survos\DataContracts\Path\DataPaths;
 use Survos\JsonlBundle\IO\JsonlWriter;
 
 /**

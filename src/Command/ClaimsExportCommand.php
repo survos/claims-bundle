@@ -8,7 +8,7 @@ use Survos\ClaimsBundle\Entity\Claim;
 use Survos\ClaimsBundle\Entity\ClaimRun;
 use Survos\ClaimsBundle\Repository\ClaimRepository;
 use Survos\ClaimsBundle\Repository\ClaimRunRepository;
-use Survos\DatasetBundle\Service\DataPaths;
+use Survos\DataContracts\Path\DataPaths;
 use Survos\JsonlBundle\IO\JsonlWriter;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Attribute\Option;

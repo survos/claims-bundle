@@ -23,7 +23,7 @@ use Survos\ClaimsBundle\Twig\ClaimConstantsExtension;
 use Survos\ClaimsBundle\Twig\ClaimFunctionsExtension;
 use Survos\ClaimsBundle\Twig\Components\OcrClaimsPanel;
 use Survos\ClaimsBundle\Twig\Components\SourceClaims;
-use Survos\DatasetBundle\Service\DataPaths;
+use Survos\DataContracts\Path\DataPaths;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;

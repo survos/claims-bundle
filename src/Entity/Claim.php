@@ -6,8 +6,9 @@ namespace Survos\ClaimsBundle\Entity;
 
 use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
 use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
-use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
-use ApiPlatform\Metadata\ApiFilter;
+use ApiPlatform\Doctrine\Orm\Filter\ExactFilter;
+use ApiPlatform\Doctrine\Orm\Filter\PartialSearchFilter;
+use ApiPlatform\Metadata\QueryParameter;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
@@ -47,15 +48,13 @@ use Survos\FieldBundle\Attribute\EntityMeta;
     ],
     normalizationContext: ['groups' => ['claim:read']],
 )]
-#[ApiFilter(SearchFilter::class, properties: [
-    'scope'       => 'exact',
-    'subjectType' => 'exact',
-    'subjectId'   => 'exact',
-    'predicate'   => 'exact',
-    'source'      => 'partial',
-])]
-#[ApiFilter(RangeFilter::class, properties: ['confidence'])]
-#[ApiFilter(OrderFilter::class, properties: ['createdAt', 'confidence', 'predicate', 'source'])]
+#[QueryParameter(key: 'scope', property: 'scope', filter: new ExactFilter())]
+#[QueryParameter(key: 'subjectType', property: 'subjectType', filter: new ExactFilter())]
+#[QueryParameter(key: 'subjectId', property: 'subjectId', filter: new ExactFilter())]
+#[QueryParameter(key: 'predicate', property: 'predicate', filter: new ExactFilter())]
+#[QueryParameter(key: 'source', property: 'source', filter: new PartialSearchFilter(caseSensitive: true))]
+#[QueryParameter(key: 'order[:property]', properties: ['createdAt', 'confidence', 'predicate', 'source'], filter: new OrderFilter())]
+#[QueryParameter(key: 'confidence', property: 'confidence', filter: new RangeFilter())]
 class Claim
 {
     // ── Subject types.
