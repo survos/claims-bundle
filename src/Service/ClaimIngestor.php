@@ -24,9 +24,11 @@ use Symfony\Component\Uid\Ulid;
  * a rebuildable index of the entity under examination — convenient for queries, but not
  * the source of truth. A null scope (ad-hoc / one-shot subject) skips the log.
  *
- * Rerun semantics: on record(), all existing DB claims AND the prior ClaimRun for
- * (scope, subjectType, subjectId, source) are removed first, then fresh ones are
- * persisted sharing one runId. claims.jsonl is append-only and only receives claims whose
+ * Rerun semantics: a re-assertion of exactly the stored claim set (same predicate, value,
+ * confidence and basis for every claim, no RunMeta, no caller runId) is a no-op that returns
+ * the existing ClaimRun: no DB writes, no JSONL lines. Otherwise all existing DB claims AND the
+ * prior ClaimRun for (scope, subjectType, subjectId, source) are removed first, then fresh ones
+ * are persisted sharing one runId. claims.jsonl is append-only and only receives claims whose
  * predicate+value the DB did not already hold for that subject+source, so a rerun that
  * asserts nothing new appends nothing; changed values are appended and supersession is
  * resolved by reading (latest wins per subject+predicate+source). The caller decides when
@@ -77,6 +79,17 @@ final class ClaimIngestor
         if ($items === []) {
             return [];
         }
+
+        // One item per subject+source, the last one winning. Every item of a batch is compared
+        // against the same preloaded (pre-batch) state, so two items for one subject (mediary
+        // sends one per image, and a record can have several) each persisted their own run and
+        // claim set: duplicates on first ingest, and with two stored runs the unchanged no-op
+        // below could never apply again.
+        $bySubject = [];
+        foreach ($items as $item) {
+            $bySubject[($item['scope'] ?? '') . "\0" . $item['subjectType'] . "\0" . $item['source'] . "\0" . $item['subjectId']] = $item;
+        }
+        $items = array_values($bySubject);
 
         // Preload stale claims/runs per (scope, subjectType, source) group — one
         // query per group instead of the 2 queries per item recordOne() does on
@@ -167,16 +180,30 @@ final class ClaimIngestor
         ?array $preloadedStaleClaims = null,
         ?array $preloadedStaleRuns = null,
     ): ClaimRun {
+        $staleClaims = $preloadedStaleClaims ?? $this->claims->findForSubjectAndSource($subjectType, $subjectId, $source, $scope);
+        $staleRuns = $preloadedStaleRuns ?? $this->runs->findForSubjectAndSource($subjectType, $subjectId, $source, $scope);
+
+        // ── Unchanged re-assertion: keep what is stored, write nothing ─────────────
+        // The common case for imported claims: a client re-sends the same item metadata on every
+        // sync (mediary's /batch receives each record's @import claims on every dispatch). Delete
+        // then re-insert made that ~10 row writes per record per pass, ~600 ms per 100-record
+        // batch (mus/cleveland, 2026-10-06) for no change at all. A run that carries its own
+        // RunMeta or a caller-chosen runId is a new run by definition and is always recorded, and a
+        // stored run that carried RunMeta is never handed back for a call without it.
+        if ($meta === null && $runId === null && \count($staleRuns) === 1 && $staleClaims !== []
+            && $staleRuns[0]->model === null && $staleRuns[0]->prompt === null
+            && self::claimSetKey($staleClaims) === self::claimSetKey($rawClaims)) {
+            return $staleRuns[0];
+        }
+
         $runId ??= (string) new Ulid();
 
         // ── DB index (queryable; what claims:fetch reads): delete-then-insert ─────
-        $staleClaims = $preloadedStaleClaims ?? $this->claims->findForSubjectAndSource($subjectType, $subjectId, $source, $scope);
         $alreadyLogged = [];
         foreach ($staleClaims as $stale) {
             $alreadyLogged[self::claimKey($stale->predicate, $stale->value)] = true;
             $this->em->remove($stale);
         }
-        $staleRuns = $preloadedStaleRuns ?? $this->runs->findForSubjectAndSource($subjectType, $subjectId, $source, $scope);
         foreach ($staleRuns as $staleRun) {
             $this->em->remove($staleRun);
         }
@@ -247,6 +274,23 @@ final class ClaimIngestor
         }
 
         return JsonlWriter::open($this->dataPaths->claimsFile($scope), 'a', JsonlWriterOptions::noLock());
+    }
+
+    /**
+     * Order-independent identity of a whole claim set: predicate, value, confidence and basis of
+     * every claim. Equal keys mean re-recording would store exactly what is already stored.
+     *
+     * @param list<Claim|RawClaim> $claims
+     */
+    private static function claimSetKey(array $claims): string
+    {
+        $keys = array_map(
+            static fn (Claim|RawClaim $c): string => self::claimKey($c->predicate, $c->value) . "\0" . $c->confidence . "\0" . ($c->basis ?? ''),
+            $claims,
+        );
+        sort($keys);
+
+        return implode("\n", $keys);
     }
 
     /** Identity of a claim within one (scope, subjectType, subjectId, source): predicate + value. */

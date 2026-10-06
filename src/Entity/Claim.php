@@ -60,6 +60,13 @@ class Claim
     // ── Subject types.
     // Conventional names any content app reuses. Only the two with clear,
     // non-ambiguous meaning — asset/media overlap, Loc is app-specific.
+    /**
+     * Source of claims a client imported from its own metadata (mediary's /batch records each
+     * item's title/date/place this way). The client already holds them, so reads it makes back
+     * for its own scope leave them out; mediary keeps them as context for AI.
+     */
+    public const SOURCE_IMPORT = '@import';
+
     public const SUBJECT_IMAGE = 'image';
     public const SUBJECT_ITEM  = 'item';
 

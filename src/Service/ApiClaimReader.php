@@ -81,14 +81,14 @@ final class ApiClaimReader implements ClaimReaderInterface
         ]);
     }
 
-    public function forScope(string $scope): array
+    public function forScope(string $scope, array $excludeSources = []): array
     {
-        return $this->rows('/api/claim-store/scope', ['scope' => $scope]);
+        return $this->rows('/api/claim-store/scope', ['scope' => $scope, 'excludeSources' => $excludeSources]);
     }
 
-    public function runsForScope(string $scope): array
+    public function runsForScope(string $scope, array $excludeSources = []): array
     {
-        return $this->rows('/api/claim-store/runs', ['scope' => $scope]);
+        return $this->rows('/api/claim-store/runs', ['scope' => $scope, 'excludeSources' => $excludeSources]);
     }
 
     public function countForSubject(string $subjectId, ?string $scope = null): int

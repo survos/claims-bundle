@@ -97,15 +97,28 @@ final class ClaimReader implements ClaimReaderInterface
      *
      * @return list<array<string,mixed>>
      */
-    public function forScope(string $scope): array
+    public function forScope(string $scope, array $excludeSources = []): array
     {
         $conn = $this->require();
+        [$exclude, $params, $types] = self::excludeSources($excludeSources);
 
         return $this->decodeValues($conn->executeQuery(
             'SELECT scope, subject_type, subject_id, predicate, source, value, confidence, basis, run_id, created_at
-             FROM claim WHERE scope = :scope ORDER BY subject_id, created_at DESC',
-            ['scope' => $scope],
+             FROM claim WHERE scope = :scope' . $exclude . ' ORDER BY subject_id, created_at DESC',
+            ['scope' => $scope] + $params,
+            $types,
         )->fetchAllAssociative());
+    }
+
+    /**
+     * @param list<string> $sources
+     * @return array{string, array<string, list<string>>, array<string, \Doctrine\DBAL\ArrayParameterType>}
+     */
+    private static function excludeSources(array $sources): array
+    {
+        return $sources === []
+            ? ['', [], []]
+            : [' AND source NOT IN (:excludeSources)', ['excludeSources' => array_values($sources)], ['excludeSources' => \Doctrine\DBAL\ArrayParameterType::STRING]];
     }
 
     /**
@@ -115,15 +128,17 @@ final class ClaimReader implements ClaimReaderInterface
      *
      * @return list<array<string,mixed>>
      */
-    public function runsForScope(string $scope): array
+    public function runsForScope(string $scope, array $excludeSources = []): array
     {
         $conn = $this->require();
+        [$exclude, $params, $types] = self::excludeSources($excludeSources);
 
         return $conn->executeQuery(
             'SELECT id, scope, subject_type, subject_id, source, model, prompt, response,
                     input_tokens, output_tokens, image_tokens, duration_ms, claim_count, created_at
-             FROM claim_run WHERE scope = :scope ORDER BY created_at DESC',
-            ['scope' => $scope],
+             FROM claim_run WHERE scope = :scope' . $exclude . ' ORDER BY created_at DESC',
+            ['scope' => $scope] + $params,
+            $types,
         )->fetchAllAssociative();
     }
 

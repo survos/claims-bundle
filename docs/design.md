@@ -84,6 +84,16 @@ Claims are never mutated. When a tool reruns:
 2. deletes all prior rows with the same `(scope, subjectType, subjectId, source)`
 3. persists the new raw claims under a fresh `runId`.
 
+**Unchanged re-assertions are a no-op.** If the incoming claims are exactly the stored set (same
+predicate, value, confidence and basis for every claim, compared order-independently, with jsonb
+key order normalised), and the call carries no `RunMeta` and no caller-chosen `runId`, `record()`
+and `recordBatch()` return the existing `ClaimRun` and write nothing: no deletes, no inserts, no
+JSONL lines. This is the common case for imported metadata: mediary's `/batch` receives each
+record's `@import` claims on every dispatch, and delete-then-insert made that about ten row writes
+per record per pass (~600 ms per 100-record batch on mus/cleveland; ~5 ms after). A call with
+`RunMeta` (an AI run, with its model, prompt and tokens) is a new run by definition and is always
+recorded, even when its claims happen to match.
+
 This means you never have to worry about "how do I update the existing
 claim?" — you don't, you rerun. Two versions of the same tool (v1 and
 v1.1) count as different sources, so their claims coexist until you

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Service;
 
+use Survos\ClaimsBundle\Entity\Claim;
 use Survos\DataContracts\Path\DataPaths;
 use Survos\JsonlBundle\IO\JsonlWriter;
 
@@ -38,9 +39,14 @@ final class ClaimsVaultWriter
      * claim-runs.jsonl. Runs are best-effort — an older claims DB may lack the claim_run table, so a
      * runs failure leaves runs=0 but never fails the claims write.
      *
+     * $excludeSources defaults to the client's own imported metadata: the caller sent those
+     * claims and already holds the data, so folding them back only re-ingests its own fields
+     * (mus/cleveland: 180,076 of 180,262 claims were @import echoes, ~90 s of folio build).
+     *
+     * @param list<string> $excludeSources
      * @return array{claims:int, runs:int, output:string, runsOutput:?string}
      */
-    public function write(string $scope, ?string $output = null): array
+    public function write(string $scope, ?string $output = null, array $excludeSources = [Claim::SOURCE_IMPORT]): array
     {
         $output ??= $this->dataPaths?->claimsFile($scope);
         if ($output === null) {
@@ -52,7 +58,7 @@ final class ClaimsVaultWriter
         // which enrich then folds as "this dataset has no claims", and _folio keeps that answer
         // until someone re-runs enrich by hand. Both readers return fully materialised arrays, so
         // this costs nothing and makes the destructive step unreachable unless the read succeeded.
-        $rows = $this->reader->forScope($scope);
+        $rows = $this->reader->forScope($scope, $excludeSources);
 
         $count = 0;
         $writer = JsonlWriter::open($output);
@@ -84,7 +90,7 @@ final class ClaimsVaultWriter
         if ($runsOutput !== null) {
             try {
                 // Same ordering as the claims write above, for the same reason.
-                $runRows = $this->reader->runsForScope($scope);
+                $runRows = $this->reader->runsForScope($scope, $excludeSources);
 
                 $rw = JsonlWriter::open($runsOutput);
                 $ok = false;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Command;
 
+use Survos\ClaimsBundle\Entity\Claim;
 use Survos\ClaimsBundle\Service\ClaimsVaultWriter;
 use Symfony\Component\Console\Attribute\Argument;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -37,6 +38,8 @@ final class ClaimsFetchCommand
         string $dataset,
         #[Option('Write to this path instead of the vault default (DataPaths::claimsFile).')]
         ?string $output = null,
+        #[Option('Also fetch @import claims (the client\'s own imported metadata), which are left out by default.')]
+        bool $includeImported = false,
     ): int {
         if (!$this->writer->isAvailable()) {
             $io->error("No claims connection. Set CLAIMS_DATABASE_URL so the `claims` connection is registered (read-only enforced by the DSN role).");
@@ -44,7 +47,7 @@ final class ClaimsFetchCommand
         }
 
         try {
-            $result = $this->writer->write($dataset, $output);
+            $result = $this->writer->write($dataset, $output, $includeImported ? [] : [Claim::SOURCE_IMPORT]);
         } catch (\Throwable $e) {
             $io->error($e->getMessage());
             return Command::FAILURE;

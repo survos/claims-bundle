@@ -145,6 +145,21 @@ try {
 truncates on open — so even an unexpected failure mid-fetch leaves the previous vault file intact
 rather than replacing it with an empty one.
 
+### Imported claims are not read back
+
+`Claim::SOURCE_IMPORT` (`@import`) marks claims a client sent from its own metadata: mediary's
+`/batch` records each item's title, date and place that way, so AI tasks can use them as context.
+The client already holds that data, so `ClaimsVaultWriter::write()` leaves them out by default
+(`$excludeSources = [Claim::SOURCE_IMPORT]`); the vault `claims.jsonl` then carries only what the
+store learned on its own (AI and human claims). Folding the echoes back only re-ingested the
+client's own fields: on mus/cleveland 180,076 of 180,262 claims were `@import`, about 90 s of a
+103 s folio build, which dropped to 10.7 s without them.
+
+`forScope()` and `runsForScope()` take the same `$excludeSources` list on both transports; over the
+API it is `GET /api/claim-store/scope?scope=…&excludeSources[]=@import`. A server that predates the
+parameter ignores it and returns the whole scope, so an older mediary degrades to the previous
+behaviour rather than failing. Pass `excludeSources: []` to `write()`, or `claims:fetch --include-imported`, to fetch everything.
+
 **Reader apps over DBAL** (legacy) don't map the entity — they read the central store over DBAL:
 
 ```yaml
