@@ -11,9 +11,9 @@ use ApiPlatform\Metadata\GetCollection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Survos\ClaimsBundle\Repository\ClaimRunRepository;
+use Survos\FieldBundle\Attribute\EntityMeta;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Uid\Ulid;
-use Survos\FieldBundle\Attribute\EntityMeta;
 
 /**
  * Audit record for ONE tool invocation that produced a batch of Claims.
@@ -32,7 +32,7 @@ use Survos\FieldBundle\Attribute\EntityMeta;
 #[ORM\Entity(repositoryClass: ClaimRunRepository::class)]
 #[ORM\Table(name: 'claim_run')]
 #[ORM\Index(fields: ['scope', 'subjectType', 'subjectId', 'source'], name: 'idx_claim_run_scope_subject_source')]
-#[ORM\Index(fields: ['createdAt'],                                   name: 'idx_claim_run_created')]
+#[ORM\Index(fields: ['createdAt'], name: 'idx_claim_run_created')]
 #[ApiResource(
     operations: [
         new Get(uriTemplate: '/claim-runs/{id}'),
@@ -112,10 +112,10 @@ class ClaimRun
         #[Groups(['claim_run:read'])]
         public private(set) int $claimCount = 0,
 
-        /** Optional ULID to pin the id; when null, a fresh one is generated. */
+        /* Optional ULID to pin the id; when null, a fresh one is generated. */
         ?string $id = null,
     ) {
-        $this->id        = $id ?? (string) new Ulid();
+        $this->id = $id ?? (string) new Ulid();
         $this->createdAt = new \DateTimeImmutable();
     }
 

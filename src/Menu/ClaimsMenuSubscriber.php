@@ -12,11 +12,15 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 class ClaimsMenuSubscriber extends AbstractAdminMenuSubscriber
 {
-    protected function getLabel(): string { return 'Claims'; }
+    protected function getLabel(): string
+    {
+        return 'Claims';
+    }
+
     protected function getResourceClasses(): array
     {
         return [
-            'Claims'    => Claim::class,
+            'Claims' => Claim::class,
             'Claim Runs' => ClaimRun::class,
         ];
     }

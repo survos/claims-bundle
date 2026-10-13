@@ -31,11 +31,11 @@ final class ClaimRepository extends ServiceEntityRepository
             ->orderBy('c.predicate', 'ASC')
             ->addOrderBy('c.createdAt', 'ASC');
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
         }
 
-        /** @var list<Claim> */
+        /* @var list<Claim> */
         return $qb->getQuery()->getResult();
     }
 
@@ -48,7 +48,7 @@ final class ClaimRepository extends ServiceEntityRepository
      */
     public function findForScope(string $subjectType, string $scope): array
     {
-        /** @var list<Claim> */
+        /* @var list<Claim> */
         return $this->createQueryBuilder('c')
             ->andWhere('c.subjectType = :st')->setParameter('st', $subjectType)
             ->andWhere('c.scope = :scope')->setParameter('scope', $scope)
@@ -71,11 +71,11 @@ final class ClaimRepository extends ServiceEntityRepository
             ->andWhere('c.subjectId = :sid')->setParameter('sid', $subjectId)
             ->andWhere('c.source = :src')->setParameter('src', $source);
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
         }
 
-        /** @var list<Claim> */
+        /* @var list<Claim> */
         return $qb->getQuery()->getResult();
     }
 
@@ -86,12 +86,13 @@ final class ClaimRepository extends ServiceEntityRepository
      * item when ingesting claims for a whole batch (e.g. mediary's media:sync).
      *
      * @param list<string> $subjectIds
+     *
      * @return array<string, list<Claim>> keyed by subjectId
      */
     public function findForSubjectsAndSource(string $subjectType, array $subjectIds, string $source, ?string $scope = null): array
     {
         $subjectIds = array_values(array_unique($subjectIds));
-        if ($subjectIds === []) {
+        if ([] === $subjectIds) {
             return [];
         }
 
@@ -100,7 +101,7 @@ final class ClaimRepository extends ServiceEntityRepository
             ->andWhere('c.subjectId IN (:sids)')->setParameter('sids', $subjectIds)
             ->andWhere('c.source = :src')->setParameter('src', $source);
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
         }
 
@@ -116,7 +117,7 @@ final class ClaimRepository extends ServiceEntityRepository
     /** @return list<Claim> */
     public function findByRun(string $runId): array
     {
-        /** @var list<Claim> */
+        /* @var list<Claim> */
         return $this->createQueryBuilder('c')
             ->andWhere('c.runId = :rid')->setParameter('rid', $runId)
             ->orderBy('c.predicate', 'ASC')
@@ -139,11 +140,11 @@ final class ClaimRepository extends ServiceEntityRepository
             ->orderBy('c.createdAt', 'DESC')
             ->setMaxResults(1);
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
         }
 
-        /** @var Claim|null */
+        /* @var Claim|null */
         return $qb->getQuery()->getOneOrNullResult();
     }
 
@@ -156,15 +157,15 @@ final class ClaimRepository extends ServiceEntityRepository
             ->orderBy('c.createdAt', 'ASC')
             ->addOrderBy('c.id', 'ASC');
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
         }
 
-        if ($subjectType !== null) {
+        if (null !== $subjectType) {
             $qb->andWhere('c.subjectType = :subjectType')->setParameter('subjectType', $subjectType);
         }
 
-        if ($source !== null) {
+        if (null !== $source) {
             $qb->andWhere('c.source = :source')->setParameter('source', $source);
         }
 

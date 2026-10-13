@@ -13,12 +13,13 @@ namespace Survos\ClaimsBundle\Service;
 final class RunMeta
 {
     public function __construct(
-        public readonly ?string $model       = null,
-        public readonly ?string $prompt      = null,
-        public readonly mixed   $response    = null,
-        public readonly ?int    $inputTokens = null,
-        public readonly ?int    $outputTokens= null,
-        public readonly ?int    $imageTokens = null,
-        public readonly ?int    $durationMs  = null,
-    ) {}
+        public readonly ?string $model = null,
+        public readonly ?string $prompt = null,
+        public readonly mixed $response = null,
+        public readonly ?int $inputTokens = null,
+        public readonly ?int $outputTokens = null,
+        public readonly ?int $imageTokens = null,
+        public readonly ?int $durationMs = null,
+    ) {
+    }
 }

@@ -64,20 +64,22 @@ final class ClaimsList
      */
     public string $layout = 'table';
 
-    public function __construct(private readonly ClaimRepository $claims) {}
+    public function __construct(private readonly ClaimRepository $claims)
+    {
+    }
 
     /** @return list<Claim> */
     public function getClaims(): array
     {
         [$type, $id] = $this->resolve();
-        if ($type === null || $id === null) {
+        if (null === $type || null === $id) {
             return [];
         }
 
-        if ($this->sources !== null && trim($this->sources) !== '') {
+        if (null !== $this->sources && '' !== trim($this->sources)) {
             $wanted = array_map('trim', explode(',', $this->sources));
-            $wanted = array_values(array_filter($wanted, static fn($s) => $s !== ''));
-            if ($wanted === []) {
+            $wanted = array_values(array_filter($wanted, static fn ($s) => '' !== $s));
+            if ([] === $wanted) {
                 $claims = $this->claims->findForSubject($type, $id, $this->scope);
             } else {
                 $claims = [];
@@ -87,42 +89,42 @@ final class ClaimsList
                     }
                 }
             }
-        } elseif ($this->source !== null) {
+        } elseif (null !== $this->source) {
             $claims = $this->claims->findForSubjectAndSource($type, $id, $this->source, $this->scope);
         } else {
             $claims = $this->claims->findForSubject($type, $id, $this->scope);
         }
 
-        if ($this->predicates !== null && trim($this->predicates) !== '') {
+        if (null !== $this->predicates && '' !== trim($this->predicates)) {
             $wantedPred = array_flip(array_values(array_filter(
                 array_map('trim', explode(',', $this->predicates)),
-                static fn($s) => $s !== '',
+                static fn ($s) => '' !== $s,
             )));
-            if ($wantedPred !== []) {
+            if ([] !== $wantedPred) {
                 $claims = array_values(array_filter(
                     $claims,
-                    static fn(Claim $c) => isset($wantedPred[$c->predicate]),
+                    static fn (Claim $c) => isset($wantedPred[$c->predicate]),
                 ));
             }
         }
 
-        if ($this->sourceSuffix !== null && trim($this->sourceSuffix) !== '') {
+        if (null !== $this->sourceSuffix && '' !== trim($this->sourceSuffix)) {
             $suffix = trim($this->sourceSuffix);
             $claims = array_values(array_filter(
                 $claims,
-                static fn(Claim $c) => str_ends_with($c->source, $suffix),
+                static fn (Claim $c) => str_ends_with($c->source, $suffix),
             ));
         }
 
-        if ($this->excludePredicates !== null && trim($this->excludePredicates) !== '') {
+        if (null !== $this->excludePredicates && '' !== trim($this->excludePredicates)) {
             $excludedPred = array_flip(array_values(array_filter(
                 array_map('trim', explode(',', $this->excludePredicates)),
-                static fn($s) => $s !== '',
+                static fn ($s) => '' !== $s,
             )));
-            if ($excludedPred !== []) {
+            if ([] !== $excludedPred) {
                 $claims = array_values(array_filter(
                     $claims,
-                    static fn(Claim $c) => !isset($excludedPred[$c->predicate]),
+                    static fn (Claim $c) => !isset($excludedPred[$c->predicate]),
                 ));
             }
         }
@@ -154,7 +156,7 @@ final class ClaimsList
         $claims = $this->getClaims();
         $rows = [];
 
-        for ($i = 0, $count = count($claims); $i < $count; $i++) {
+        for ($i = 0, $count = count($claims); $i < $count; ++$i) {
             $claim = $claims[$i];
             $label = $this->claimLabel($claim->value);
 
@@ -164,7 +166,7 @@ final class ClaimsList
                 continue;
             }
 
-            if ($this->confidenceWord($claim->value) !== null) {
+            if (null !== $this->confidenceWord($claim->value)) {
                 continue;
             }
 
@@ -177,7 +179,7 @@ final class ClaimsList
             ];
         }
 
-        usort($rows, static fn(array $a, array $b): int => $b['confidence'] <=> $a['confidence']);
+        usort($rows, static fn (array $a, array $b): int => $b['confidence'] <=> $a['confidence']);
 
         return $rows;
     }
@@ -188,6 +190,7 @@ final class ClaimsList
      * treating "medium" or "high" as tags.
      *
      * @param list<Claim> $claims
+     *
      * @return array{label: string, confidence: float, basis: ?string, predicate: string, source: string}|null
      */
     private function legacyTripletView(array $claims, int $offset, string $label): ?array
@@ -199,17 +202,17 @@ final class ClaimsList
         $claim = $claims[$offset];
         $confidence = $this->confidenceWord($claims[$offset + 1]->value);
         if (
-            $confidence !== null
+            null !== $confidence
             && $this->isSameClaimSeries($claim, $claims[$offset + 1])
             && $this->isSameClaimSeries($claim, $claims[$offset + 2])
         ) {
-                $rows[] = [
-                    'label' => $label,
+            $rows[] = [
+                'label' => $label,
                 'confidence' => $confidence,
                 'basis' => $this->claimLabel($claims[$offset + 2]->value),
-                    'predicate' => $claim->predicate,
-                    'source' => $claim->source,
-                ];
+                'predicate' => $claim->predicate,
+                'source' => $claim->source,
+            ];
         }
 
         return null;
@@ -219,13 +222,13 @@ final class ClaimsList
     private function resolve(): array
     {
         $type = $this->subjectType;
-        $id   = $this->subjectId;
+        $id = $this->subjectId;
 
-        if (($type === null || $id === null) && $this->subject !== null) {
+        if ((null === $type || null === $id) && null !== $this->subject) {
             $type ??= strtolower((new \ReflectionClass($this->subject))->getShortName());
-            if ($id === null && method_exists($this->subject, 'getId')) {
+            if (null === $id && method_exists($this->subject, 'getId')) {
                 $id = (string) $this->subject->getId();
-            } elseif ($id === null && property_exists($this->subject, 'id')) {
+            } elseif (null === $id && property_exists($this->subject, 'id')) {
                 $id = (string) $this->subject->id;
             }
         }
@@ -256,10 +259,11 @@ final class ClaimsList
     {
         if (is_array($value) || $value instanceof \stdClass) {
             $term = TermClaim::from($value);
-            return $term->term !== '' ? $term->term : '—';
+
+            return '' !== $term->term ? $term->term : '—';
         }
 
-        if ($value === null || $value === '') {
+        if (null === $value || '' === $value) {
             return '—';
         }
 

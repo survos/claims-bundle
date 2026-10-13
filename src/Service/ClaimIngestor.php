@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Survos\ClaimsBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Survos\ClaimsBundle\Entity\Claim;
 use Survos\ClaimsBundle\Entity\ClaimRun;
 use Survos\ClaimsBundle\Repository\ClaimRepository;
@@ -12,8 +14,6 @@ use Survos\ClaimsBundle\Repository\ClaimRunRepository;
 use Survos\DataContracts\Path\DataPaths;
 use Survos\JsonlBundle\IO\JsonlWriter;
 use Survos\JsonlBundle\IO\JsonlWriterOptions;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -72,11 +72,12 @@ final class ClaimIngestor
      * scope in the batch (almost always just one) instead of per item.
      *
      * @param list<array{scope: ?string, subjectType: string, subjectId: string, source: string, rawClaims: list<RawClaim>, meta?: ?RunMeta, runId?: ?string}> $items
+     *
      * @return list<ClaimRun>
      */
     public function recordBatch(array $items): array
     {
-        if ($items === []) {
+        if ([] === $items) {
             return [];
         }
 
@@ -87,7 +88,7 @@ final class ClaimIngestor
         // below could never apply again.
         $bySubject = [];
         foreach ($items as $item) {
-            $bySubject[($item['scope'] ?? '') . "\0" . $item['subjectType'] . "\0" . $item['source'] . "\0" . $item['subjectId']] = $item;
+            $bySubject[($item['scope'] ?? '')."\0".$item['subjectType']."\0".$item['source']."\0".$item['subjectId']] = $item;
         }
         $items = array_values($bySubject);
 
@@ -99,7 +100,7 @@ final class ClaimIngestor
         // (e.g. two different sources) doesn't collide.
         $groups = [];
         foreach ($items as $item) {
-            $groupKey = ($item['scope'] ?? '') . "\0" . $item['subjectType'] . "\0" . $item['source'];
+            $groupKey = ($item['scope'] ?? '')."\0".$item['subjectType']."\0".$item['source'];
             $groups[$groupKey]['scope'] ??= $item['scope'];
             $groups[$groupKey]['subjectType'] ??= $item['subjectType'];
             $groups[$groupKey]['source'] ??= $item['source'];
@@ -110,10 +111,10 @@ final class ClaimIngestor
         $staleRuns = [];
         foreach ($groups as $groupKey => $group) {
             foreach ($this->claims->findForSubjectsAndSource($group['subjectType'], $group['subjectIds'], $group['source'], $group['scope']) as $subjectId => $rows) {
-                $staleClaims[$groupKey . "\0" . $subjectId] = $rows;
+                $staleClaims[$groupKey."\0".$subjectId] = $rows;
             }
             foreach ($this->runs->findForSubjectsAndSource($group['subjectType'], $group['subjectIds'], $group['source'], $group['scope']) as $subjectId => $rows) {
-                $staleRuns[$groupKey . "\0" . $subjectId] = $rows;
+                $staleRuns[$groupKey."\0".$subjectId] = $rows;
             }
         }
 
@@ -124,8 +125,8 @@ final class ClaimIngestor
             foreach ($items as $item) {
                 $scope = $item['scope'];
                 $scopeKey = $scope ?? '';
-                $groupKey = $scopeKey . "\0" . $item['subjectType'] . "\0" . $item['source'];
-                $subjectKey = $groupKey . "\0" . $item['subjectId'];
+                $groupKey = $scopeKey."\0".$item['subjectType']."\0".$item['source'];
+                $subjectKey = $groupKey."\0".$item['subjectId'];
 
                 if (!array_key_exists($scopeKey, $writers)) {
                     $writers[$scopeKey] = $this->openVaultWriter($scope);
@@ -148,7 +149,7 @@ final class ClaimIngestor
             return $runs;
         } finally {
             foreach ($writers as $scopeKey => $writer) {
-                if ($writer === null) {
+                if (null === $writer) {
                     continue;
                 }
                 try {
@@ -163,10 +164,10 @@ final class ClaimIngestor
     }
 
     /**
-     * @param list<RawClaim> $rawClaims
-     * @param list<Claim>|null $preloadedStaleClaims when non-null, used instead of a fresh
-     *        findForSubjectAndSource() query (recordBatch() preloads these per group)
-     * @param list<ClaimRun>|null $preloadedStaleRuns same, for runs
+     * @param list<RawClaim>      $rawClaims
+     * @param list<Claim>|null    $preloadedStaleClaims when non-null, used instead of a fresh
+     *                                                  findForSubjectAndSource() query (recordBatch() preloads these per group)
+     * @param list<ClaimRun>|null $preloadedStaleRuns   same, for runs
      */
     private function recordOne(
         ?string $scope,
@@ -190,8 +191,8 @@ final class ClaimIngestor
         // batch (mus/cleveland, 2026-10-06) for no change at all. A run that carries its own
         // RunMeta or a caller-chosen runId is a new run by definition and is always recorded, and a
         // stored run that carried RunMeta is never handed back for a call without it.
-        if ($meta === null && $runId === null && \count($staleRuns) === 1 && $staleClaims !== []
-            && $staleRuns[0]->model === null && $staleRuns[0]->prompt === null
+        if (null === $meta && null === $runId && 1 === \count($staleRuns) && [] !== $staleClaims
+            && null === $staleRuns[0]->model && null === $staleRuns[0]->prompt
             && self::claimSetKey($staleClaims) === self::claimSetKey($rawClaims)) {
             return $staleRuns[0];
         }
@@ -209,33 +210,33 @@ final class ClaimIngestor
         }
 
         $run = new ClaimRun(
-            scope:        $scope,
-            subjectType:  $subjectType,
-            subjectId:    $subjectId,
-            source:       $source,
-            model:        $meta?->model,
-            prompt:       $meta?->prompt,
-            response:     $meta?->response,
-            inputTokens:  $meta?->inputTokens,
+            scope: $scope,
+            subjectType: $subjectType,
+            subjectId: $subjectId,
+            source: $source,
+            model: $meta?->model,
+            prompt: $meta?->prompt,
+            response: $meta?->response,
+            inputTokens: $meta?->inputTokens,
             outputTokens: $meta?->outputTokens,
-            imageTokens:  $meta?->imageTokens,
-            durationMs:   $meta?->durationMs,
-            claimCount:   count($rawClaims),
-            id:           $runId,
+            imageTokens: $meta?->imageTokens,
+            durationMs: $meta?->durationMs,
+            claimCount: count($rawClaims),
+            id: $runId,
         );
         $this->em->persist($run);
 
         foreach ($rawClaims as $rawClaim) {
             $claim = new Claim(
-                scope:       $scope,
+                scope: $scope,
                 subjectType: $subjectType,
-                subjectId:   $subjectId,
-                predicate:   $rawClaim->predicate,
-                source:      $source,
-                value:       $rawClaim->value,
-                confidence:  $rawClaim->confidence,
-                basis:       $rawClaim->basis,
-                runId:       $runId,
+                subjectId: $subjectId,
+                predicate: $rawClaim->predicate,
+                source: $source,
+                value: $rawClaim->value,
+                confidence: $rawClaim->confidence,
+                basis: $rawClaim->basis,
+                runId: $runId,
             );
             $this->em->persist($claim);
         }
@@ -252,7 +253,7 @@ final class ClaimIngestor
             static fn (RawClaim $c): bool => !isset($alreadyLogged[self::claimKey($c->predicate, $c->value)]),
         ));
         try {
-            if ($sharedWriter !== null) {
+            if (null !== $sharedWriter) {
                 $this->writeClaimsJsonl($sharedWriter, $scope, $subjectType, $subjectId, $source, $newClaims, $runId);
             } else {
                 $this->appendToClaimsJsonl($scope, $subjectType, $subjectId, $source, $newClaims, $runId);
@@ -285,7 +286,7 @@ final class ClaimIngestor
     private static function claimSetKey(array $claims): string
     {
         $keys = array_map(
-            static fn (Claim|RawClaim $c): string => self::claimKey($c->predicate, $c->value) . "\0" . $c->confidence . "\0" . ($c->basis ?? ''),
+            static fn (Claim|RawClaim $c): string => self::claimKey($c->predicate, $c->value)."\0".$c->confidence."\0".($c->basis ?? ''),
             $claims,
         );
         sort($keys);
@@ -296,7 +297,7 @@ final class ClaimIngestor
     /** Identity of a claim within one (scope, subjectType, subjectId, source): predicate + value. */
     private static function claimKey(string $predicate, mixed $value): string
     {
-        return $predicate . "\0" . json_encode(self::sortKeys($value), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
+        return $predicate."\0".json_encode(self::sortKeys($value), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
     }
 
     /** jsonb does not keep object key order, so a structured value read back from the DB must compare key-sorted. */

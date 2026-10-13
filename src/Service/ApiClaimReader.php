@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Service;
 
-use Survos\ClaimsBundle\Exception\ClaimsUnavailableException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Survos\ClaimsBundle\Exception\ClaimsUnavailableException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -103,6 +103,7 @@ final class ApiClaimReader implements ClaimReaderInterface
 
     /**
      * @param array<string,mixed> $query
+     *
      * @return list<array<string,mixed>>
      */
     private function rows(string $path, array $query): array
@@ -115,6 +116,7 @@ final class ApiClaimReader implements ClaimReaderInterface
 
     /**
      * @param array<string,mixed> $query
+     *
      * @return array<string,mixed>
      */
     private function request(string $path, array $query): array
@@ -132,11 +134,11 @@ final class ApiClaimReader implements ClaimReaderInterface
 
         $headers = ['Accept' => 'application/json'];
         if (null !== $this->token && '' !== $this->token) {
-            $headers['Authorization'] = 'Bearer ' . $this->token;
+            $headers['Authorization'] = 'Bearer '.$this->token;
         }
 
         try {
-            $response = $this->httpClient->request('GET', rtrim($this->baseUri, '/') . $path, [
+            $response = $this->httpClient->request('GET', rtrim($this->baseUri, '/').$path, [
                 'query' => $query,
                 'headers' => $headers,
             ]);

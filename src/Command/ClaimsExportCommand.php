@@ -22,9 +22,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class ClaimsExportCommand
 {
     public function __construct(
-        private readonly ClaimRepository    $claims,
+        private readonly ClaimRepository $claims,
         private readonly ClaimRunRepository $runs,
-        private readonly ?DataPaths         $dataPaths = null,
+        private readonly ?DataPaths $dataPaths = null,
     ) {
     }
 
@@ -48,21 +48,22 @@ final class ClaimsExportCommand
         $runsOutput = null;
 
         if ($dataset) {
-            $scope      ??= $dataset;
-            $output     ??= $this->dataPaths?->claimsFile($dataset);
+            $scope ??= $dataset;
+            $output ??= $this->dataPaths?->claimsFile($dataset);
             if ($includeRuns && $this->dataPaths) {
                 $runsOutput = $this->dataPaths->claimsFile($dataset, 'runs.jsonl');
             }
         }
 
-        if (($output !== null || $runsOutput !== null) && !class_exists(JsonlWriter::class)) {
+        if ((null !== $output || null !== $runsOutput) && !class_exists(JsonlWriter::class)) {
             $io->error("jsonl-bundle is not installed.\n\ncomposer req survos/jsonl-bundle");
+
             return Command::FAILURE;
         }
 
         // ── Claims ───────────────────────────────────────────────────────────
-        $count     = 0;
-        $writer    = $output !== null ? JsonlWriter::open($output) : null;
+        $count = 0;
+        $writer = null !== $output ? JsonlWriter::open($output) : null;
         $completed = false;
 
         try {
@@ -70,21 +71,21 @@ final class ClaimsExportCommand
                 \assert($claim instanceof Claim);
                 $row = $claim->toArray();
 
-                if ($writer !== null) {
+                if (null !== $writer) {
                     $writer->write($row);
                 } else {
-                    fwrite(\STDOUT, \json_encode($row, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n");
+                    fwrite(\STDOUT, \json_encode($row, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE)."\n");
                 }
                 ++$count;
             }
             $completed = true;
         } finally {
-            if ($writer !== null) {
+            if (null !== $writer) {
                 $completed ? $writer->finish() : $writer->close();
             }
         }
 
-        $output !== null
+        null !== $output
             ? $io->success(sprintf('Exported %d claim(s) to %s.', $count, $output))
             : $io->writeln(sprintf('Exported %d claim(s).', $count), \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_VERBOSE);
 
@@ -93,47 +94,47 @@ final class ClaimsExportCommand
             return Command::SUCCESS;
         }
 
-        $runCount     = 0;
-        $runsWriter   = $runsOutput !== null ? JsonlWriter::open($runsOutput) : null;
+        $runCount = 0;
+        $runsWriter = null !== $runsOutput ? JsonlWriter::open($runsOutput) : null;
         $runsCompleted = false;
 
         try {
             foreach ($this->runs->iterateForExport($scope, $subjectType) as $run) {
                 \assert($run instanceof ClaimRun);
                 $row = [
-                    'id'          => $run->id,
-                    'createdAt'   => $run->createdAt->format(\DateTimeInterface::ATOM),
-                    'scope'       => $run->scope,
+                    'id' => $run->id,
+                    'createdAt' => $run->createdAt->format(\DateTimeInterface::ATOM),
+                    'scope' => $run->scope,
                     'subjectType' => $run->subjectType,
-                    'subjectId'   => $run->subjectId,
-                    'source'      => $run->source,
-                    'model'       => $run->model,
+                    'subjectId' => $run->subjectId,
+                    'source' => $run->source,
+                    'model' => $run->model,
                     'inputTokens' => $run->inputTokens,
-                    'outputTokens'=> $run->outputTokens,
+                    'outputTokens' => $run->outputTokens,
                     'imageTokens' => $run->imageTokens,
-                    'durationMs'  => $run->durationMs,
-                    'claimCount'  => $run->claimCount,
+                    'durationMs' => $run->durationMs,
+                    'claimCount' => $run->claimCount,
                 ];
                 if ($includePrompt) {
-                    $row['prompt']   = $run->prompt;
+                    $row['prompt'] = $run->prompt;
                     $row['response'] = $run->response;
                 }
 
-                if ($runsWriter !== null) {
+                if (null !== $runsWriter) {
                     $runsWriter->write($row);
                 } else {
-                    fwrite(\STDOUT, \json_encode($row, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n");
+                    fwrite(\STDOUT, \json_encode($row, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE)."\n");
                 }
                 ++$runCount;
             }
             $runsCompleted = true;
         } finally {
-            if ($runsWriter !== null) {
+            if (null !== $runsWriter) {
                 $runsCompleted ? $runsWriter->finish() : $runsWriter->close();
             }
         }
 
-        $runsOutput !== null
+        null !== $runsOutput
             ? $io->success(sprintf('Exported %d run(s) to %s.', $runCount, $runsOutput))
             : $io->writeln(sprintf('Exported %d run(s).', $runCount), \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_VERBOSE);
 

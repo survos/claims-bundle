@@ -44,12 +44,13 @@ final class ClaimsVaultWriter
      * (mus/cleveland: 180,076 of 180,262 claims were @import echoes, ~90 s of folio build).
      *
      * @param list<string> $excludeSources
+     *
      * @return array{claims:int, runs:int, output:string, runsOutput:?string}
      */
     public function write(string $scope, ?string $output = null, array $excludeSources = [Claim::SOURCE_IMPORT]): array
     {
         $output ??= $this->dataPaths?->claimsFile($scope);
-        if ($output === null) {
+        if (null === $output) {
             throw new \RuntimeException('No output path: dataset-bundle (DataPaths) is unavailable, so pass $output explicitly.');
         }
 
@@ -87,7 +88,7 @@ final class ClaimsVaultWriter
 
         $runCount = 0;
         $runsOutput = $this->dataPaths?->claimsFile($scope, 'claim-runs.jsonl');
-        if ($runsOutput !== null) {
+        if (null !== $runsOutput) {
             try {
                 // Same ordering as the claims write above, for the same reason.
                 $runRows = $this->reader->runsForScope($scope, $excludeSources);

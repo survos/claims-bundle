@@ -46,7 +46,7 @@ final class ClaimsUsageCommand
         #[Option('Break the totals down by scope as well as source and model.')]
         bool $byScope = false,
     ): int {
-        if ($this->claimsConnection === null) {
+        if (null === $this->claimsConnection) {
             $io->error('No claims connection. Set CLAIMS_DATABASE_URL so the `claims` connection is registered.');
 
             return Command::FAILURE;
@@ -54,15 +54,15 @@ final class ClaimsUsageCommand
 
         $where = [];
         $params = [];
-        if ($scope !== null) {
+        if (null !== $scope) {
             $where[] = 'scope = :scope';
             $params['scope'] = $scope;
         }
-        if ($since !== null) {
+        if (null !== $since) {
             $where[] = 'created_at >= :since';
             $params['since'] = $since;
         }
-        if ($until !== null) {
+        if (null !== $until) {
             $where[] = 'created_at < :until';
             $params['until'] = $until;
         }
@@ -82,13 +82,13 @@ final class ClaimsUsageCommand
               GROUP BY %s
               ORDER BY calls DESC',
             $select,
-            $where === [] ? '' : 'WHERE ' . implode(' AND ', $where),
+            [] === $where ? '' : 'WHERE '.implode(' AND ', $where),
             $select,
         );
 
         $rows = $this->claimsConnection->fetchAllAssociative($sql, $params);
 
-        if ($rows === []) {
+        if ([] === $rows) {
             $io->warning('No runs matched.');
 
             return Command::SUCCESS;
@@ -119,7 +119,7 @@ final class ClaimsUsageCommand
             }
             $totalIn += $in;
             $totalOut += $out;
-            if ($cost === null) {
+            if (null === $cost) {
                 $anyUnpriced = true;
             } else {
                 $totalCost += $cost;
@@ -134,7 +134,7 @@ final class ClaimsUsageCommand
                 number_format($calls),
                 number_format($in),
                 number_format($out),
-                $cost === null ? '—' : sprintf('%.2f', $cost),
+                null === $cost ? '—' : sprintf('%.2f', $cost),
                 substr((string) $row['first_run'], 0, 19),
                 substr((string) $row['last_run'], 0, 19),
             ];
@@ -168,7 +168,7 @@ final class ClaimsUsageCommand
         if ($anyUnpriced) {
             $io->note(
                 'Some models have no entry in survos_claims.model_rates, so their cost is blank and '
-                . 'excluded from the total. Add them to price the run; token counts above are complete either way.',
+                .'excluded from the total. Add them to price the run; token counts above are complete either way.',
             );
         }
 
@@ -182,7 +182,7 @@ final class ClaimsUsageCommand
     private function cost(string $model, int $calls, int $inTokens, int $outTokens): ?float
     {
         $rate = $this->rateFor($model);
-        if ($rate === null) {
+        if (null === $rate) {
             return null;
         }
 
@@ -200,7 +200,7 @@ final class ClaimsUsageCommand
      */
     private function rateFor(string $model): ?array
     {
-        if ($model === '') {
+        if ('' === $model) {
             return null;
         }
         if (isset($this->modelRates[$model])) {

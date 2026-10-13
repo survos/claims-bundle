@@ -6,21 +6,21 @@ namespace Survos\ClaimsBundle;
 
 use Survos\ClaimsBundle\Command\ClaimsExportCommand;
 use Survos\ClaimsBundle\Command\ClaimsFetchCommand;
-use Survos\ClaimsBundle\Command\ClaimsUsageCommand;
 use Survos\ClaimsBundle\Command\ClaimsImportCommand;
+use Survos\ClaimsBundle\Command\ClaimsUsageCommand;
 use Survos\ClaimsBundle\Repository\ClaimRepository;
 use Survos\ClaimsBundle\Repository\ClaimRunRepository;
+use Survos\ClaimsBundle\Service\ApiClaimReader;
 use Survos\ClaimsBundle\Service\ClaimAggregator;
 use Survos\ClaimsBundle\Service\ClaimIngestor;
 use Survos\ClaimsBundle\Service\ClaimProjector;
-use Survos\ClaimsBundle\Service\ApiClaimReader;
 use Survos\ClaimsBundle\Service\ClaimReader;
 use Survos\ClaimsBundle\Service\ClaimReaderInterface;
 use Survos\ClaimsBundle\Service\ClaimsVaultWriter;
-use Survos\ClaimsBundle\Twig\Components\ClaimsList;
-use Survos\ClaimsBundle\Twig\Components\ClaimsSummary;
 use Survos\ClaimsBundle\Twig\ClaimConstantsExtension;
 use Survos\ClaimsBundle\Twig\ClaimFunctionsExtension;
+use Survos\ClaimsBundle\Twig\Components\ClaimsList;
+use Survos\ClaimsBundle\Twig\Components\ClaimsSummary;
 use Survos\ClaimsBundle\Twig\Components\OcrClaimsPanel;
 use Survos\ClaimsBundle\Twig\Components\SourceClaims;
 use Survos\DataContracts\Path\DataPaths;
@@ -28,6 +28,7 @@ use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 final class SurvosClaimsBundle extends AbstractBundle
@@ -149,7 +150,7 @@ final class SurvosClaimsBundle extends AbstractBundle
             // (ServiceEntityRepository) resolve their EM from the Claim mapping, so moving the
             // mapping to the named EM (prependExtension) carries them along automatically.
             if (($config['entity_manager'] ?? 'default') !== 'default') {
-                $ingestor->arg('$em', service('doctrine.orm.' . $config['entity_manager'] . '_entity_manager'));
+                $ingestor->arg('$em', service('doctrine.orm.'.$config['entity_manager'].'_entity_manager'));
             }
             $services->set(ClaimAggregator::class)
                 ->arg('$listPredicates', $config['list_predicates']);
@@ -160,7 +161,7 @@ final class SurvosClaimsBundle extends AbstractBundle
             $services->set(OcrClaimsPanel::class);
 
             if (class_exists(\Survos\TablerBundle\Event\MenuEvent::class)) {
-                $services->set(\Survos\ClaimsBundle\Menu\ClaimsMenuSubscriber::class)
+                $services->set(Menu\ClaimsMenuSubscriber::class)
                     ->autowire()
                     ->autoconfigure();
             }
@@ -190,7 +191,7 @@ final class SurvosClaimsBundle extends AbstractBundle
         $em = 'default';
         foreach ($builder->getExtensionConfig('survos_claims') as $cfg) {
             if (\is_array($cfg) && \array_key_exists('entity_manager', $cfg)
-                && \is_string($cfg['entity_manager']) && $cfg['entity_manager'] !== '') {
+                && \is_string($cfg['entity_manager']) && '' !== $cfg['entity_manager']) {
                 $em = $cfg['entity_manager'];
             }
         }
@@ -205,7 +206,7 @@ final class SurvosClaimsBundle extends AbstractBundle
             ?? $_SERVER['CLAIMS_DATABASE_URL']
             ?? getenv('CLAIMS_DATABASE_URL');
 
-        return is_string($url) && $url !== '';
+        return is_string($url) && '' !== $url;
     }
 
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
@@ -219,7 +220,7 @@ final class SurvosClaimsBundle extends AbstractBundle
                 'SurvosClaimsBundle' => [
                     'is_bundle' => false,
                     'type' => 'attribute',
-                    'dir' => \dirname(__DIR__) . '/src/Entity',
+                    'dir' => \dirname(__DIR__).'/src/Entity',
                     'prefix' => 'Survos\\ClaimsBundle\\Entity',
                     'alias' => 'Claims',
                 ],
@@ -229,7 +230,7 @@ final class SurvosClaimsBundle extends AbstractBundle
             // EM's connection is defined by the app; we only attach the entity mapping to it here.
             $emName = self::entityManagerName($builder);
             $builder->prependExtensionConfig('doctrine', [
-                'orm' => $emName === 'default'
+                'orm' => 'default' === $emName
                     ? ['mappings' => $mapping]
                     : ['entity_managers' => [$emName => ['mappings' => $mapping]]],
             ]);
@@ -257,7 +258,7 @@ final class SurvosClaimsBundle extends AbstractBundle
         // Expose bundle templates under @SurvosClaims for component + override.
         $builder->prependExtensionConfig('twig', [
             'paths' => [
-                \dirname(__DIR__) . '/templates' => 'SurvosClaims',
+                \dirname(__DIR__).'/templates' => 'SurvosClaims',
             ],
         ]);
     }

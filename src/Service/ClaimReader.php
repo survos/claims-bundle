@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Service;
 
-use Survos\ClaimsBundle\Exception\ClaimsUnavailableException;
 use Doctrine\DBAL\Connection;
+use Survos\ClaimsBundle\Exception\ClaimsUnavailableException;
 
 /**
  * Read access to the central claims store (the Postgres `claim` table), via the `claims`
@@ -32,7 +32,7 @@ final class ClaimReader implements ClaimReaderInterface
     /** True when the claims DB connection is wired (CLAIMS_DATABASE_URL set). */
     public function isAvailable(): bool
     {
-        return $this->connection !== null;
+        return null !== $this->connection;
     }
 
     /**
@@ -40,11 +40,12 @@ final class ClaimReader implements ClaimReaderInterface
      * media ids (deterministic base64-of-url); folio joins them via page.media_id.
      *
      * @param list<string> $subjectIds
+     *
      * @return list<array<string,mixed>>
      */
     public function forSubjects(array $subjectIds, ?string $scope = null): array
     {
-        if ($subjectIds === []) {
+        if ([] === $subjectIds) {
             return [];
         }
         $conn = $this->require();
@@ -52,14 +53,14 @@ final class ClaimReader implements ClaimReaderInterface
         $where = ['subject_id IN (:ids)'];
         $params = ['ids' => array_values($subjectIds)];
         $types = ['ids' => \Doctrine\DBAL\ArrayParameterType::STRING];
-        if ($scope !== null && $scope !== '') {
+        if (null !== $scope && '' !== $scope) {
             $where[] = 'scope = :scope';
             $params['scope'] = $scope;
         }
 
         return $this->decodeValues($conn->executeQuery(
             'SELECT scope, subject_id, predicate, source, value, confidence, basis, run_id, created_at
-             FROM claim WHERE ' . implode(' AND ', $where) . ' ORDER BY subject_id, created_at DESC',
+             FROM claim WHERE '.implode(' AND ', $where).' ORDER BY subject_id, created_at DESC',
             $params,
             $types,
         )->fetchAllAssociative());
@@ -70,6 +71,7 @@ final class ClaimReader implements ClaimReaderInterface
      * across sources. This is what enrich folds inline into Item/Page records.
      *
      * @param list<string> $subjectIds
+     *
      * @return list<array<string,mixed>>
      */
     public function manifestedForSubjects(array $subjectIds, ?string $scope = null): array
@@ -78,7 +80,7 @@ final class ClaimReader implements ClaimReaderInterface
         $out = [];
         foreach ($this->forSubjects($subjectIds, $scope) as $row) {
             // forSubjects() is ordered created_at DESC, so the first per (subject,predicate) wins.
-            $key = $row['subject_id'] . '|' . $row['predicate'];
+            $key = $row['subject_id'].'|'.$row['predicate'];
             if (isset($seen[$key])) {
                 continue;
             }
@@ -104,7 +106,7 @@ final class ClaimReader implements ClaimReaderInterface
 
         return $this->decodeValues($conn->executeQuery(
             'SELECT scope, subject_type, subject_id, predicate, source, value, confidence, basis, run_id, created_at
-             FROM claim WHERE scope = :scope' . $exclude . ' ORDER BY subject_id, created_at DESC',
+             FROM claim WHERE scope = :scope'.$exclude.' ORDER BY subject_id, created_at DESC',
             ['scope' => $scope] + $params,
             $types,
         )->fetchAllAssociative());
@@ -112,11 +114,12 @@ final class ClaimReader implements ClaimReaderInterface
 
     /**
      * @param list<string> $sources
+     *
      * @return array{string, array<string, list<string>>, array<string, \Doctrine\DBAL\ArrayParameterType>}
      */
     private static function excludeSources(array $sources): array
     {
-        return $sources === []
+        return [] === $sources
             ? ['', [], []]
             : [' AND source NOT IN (:excludeSources)', ['excludeSources' => array_values($sources)], ['excludeSources' => \Doctrine\DBAL\ArrayParameterType::STRING]];
     }
@@ -136,7 +139,7 @@ final class ClaimReader implements ClaimReaderInterface
         return $conn->executeQuery(
             'SELECT id, scope, subject_type, subject_id, source, model, prompt, response,
                     input_tokens, output_tokens, image_tokens, duration_ms, claim_count, created_at
-             FROM claim_run WHERE scope = :scope' . $exclude . ' ORDER BY created_at DESC',
+             FROM claim_run WHERE scope = :scope'.$exclude.' ORDER BY created_at DESC',
             ['scope' => $scope] + $params,
             $types,
         )->fetchAllAssociative();
@@ -148,13 +151,13 @@ final class ClaimReader implements ClaimReaderInterface
         $conn = $this->require();
         $where = ['subject_id = :id'];
         $params = ['id' => $subjectId];
-        if ($scope !== null && $scope !== '') {
+        if (null !== $scope && '' !== $scope) {
             $where[] = 'scope = :scope';
             $params['scope'] = $scope;
         }
 
         return (int) $conn->executeQuery(
-            'SELECT COUNT(*) FROM claim WHERE ' . implode(' AND ', $where),
+            'SELECT COUNT(*) FROM claim WHERE '.implode(' AND ', $where),
             $params,
         )->fetchOne();
     }
@@ -168,6 +171,7 @@ final class ClaimReader implements ClaimReaderInterface
      * (a driver that already type-maps jsonb) pass through untouched; a decode error keeps the original.
      *
      * @param list<array<string,mixed>> $rows
+     *
      * @return list<array<string,mixed>>
      */
     private function decodeValues(array $rows): array
@@ -175,7 +179,7 @@ final class ClaimReader implements ClaimReaderInterface
         foreach ($rows as &$row) {
             if (\is_string($row['value'] ?? null)) {
                 $decoded = json_decode($row['value'], true);
-                if (json_last_error() === \JSON_ERROR_NONE) {
+                if (\JSON_ERROR_NONE === json_last_error()) {
                     $row['value'] = $decoded;
                 }
             }
@@ -187,15 +191,12 @@ final class ClaimReader implements ClaimReaderInterface
 
     private function require(): Connection
     {
-        if ($this->connection === null) {
+        if (null === $this->connection) {
             // ClaimsUnavailableException, not a bare RuntimeException, so "the store is not usable"
             // is one catchable type across both transports — a caller that degrades gracefully
             // shouldn't have to know whether it got DBAL or HTTP. It extends RuntimeException, so
             // anything already catching that is unaffected.
-            throw new ClaimsUnavailableException(
-                'ClaimReader has no connection. Set CLAIMS_DATABASE_URL so claims-bundle '
-                . 'registers the `claims` connection (read-only enforced by the DSN role).',
-            );
+            throw new ClaimsUnavailableException('ClaimReader has no connection. Set CLAIMS_DATABASE_URL so claims-bundle registers the `claims` connection (read-only enforced by the DSN role).');
         }
 
         return $this->connection;

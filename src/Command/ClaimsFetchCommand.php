@@ -42,7 +42,8 @@ final class ClaimsFetchCommand
         bool $includeImported = false,
     ): int {
         if (!$this->writer->isAvailable()) {
-            $io->error("No claims connection. Set CLAIMS_DATABASE_URL so the `claims` connection is registered (read-only enforced by the DSN role).");
+            $io->error('No claims connection. Set CLAIMS_DATABASE_URL so the `claims` connection is registered (read-only enforced by the DSN role).');
+
             return Command::FAILURE;
         }
 
@@ -50,11 +51,12 @@ final class ClaimsFetchCommand
             $result = $this->writer->write($dataset, $output, $includeImported ? [] : [Claim::SOURCE_IMPORT]);
         } catch (\Throwable $e) {
             $io->error($e->getMessage());
+
             return Command::FAILURE;
         }
 
         $io->success(sprintf('Fetched %d claim(s) for "%s" → %s', $result['claims'], $dataset, $result['output']));
-        if ($result['runsOutput'] !== null) {
+        if (null !== $result['runsOutput']) {
             $io->success(sprintf('Fetched %d run(s) for "%s" → %s', $result['runs'], $dataset, $result['runsOutput']));
         }
 

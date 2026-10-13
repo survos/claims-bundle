@@ -27,7 +27,7 @@ final class ClaimFunctionsExtension
         return match (true) {
             $score >= 80 => 'success',
             $score >= 50 => 'warning',
-            default      => 'secondary',
+            default => 'secondary',
         };
     }
 }

@@ -19,13 +19,15 @@ final class OcrClaimsPanel
 
     public ?string $scope = null;
 
-    public function __construct(private readonly ClaimRepository $claims) {}
+    public function __construct(private readonly ClaimRepository $claims)
+    {
+    }
 
     /** @return list<Claim> */
     public function ocrClaims(): array
     {
         [$type, $id] = $this->resolve();
-        if ($type === null || $id === null) {
+        if (null === $type || null === $id) {
             return [];
         }
 
@@ -38,35 +40,36 @@ final class OcrClaimsPanel
 
         $claims = array_values(array_filter(
             $this->claims->findForSubject($type, $id, $this->scope),
-            static fn(Claim $claim): bool => isset($wanted[$claim->predicate]) && is_string($claim->value) && trim($claim->value) !== '',
+            static fn (Claim $claim): bool => isset($wanted[$claim->predicate]) && is_string($claim->value) && '' !== trim($claim->value),
         ));
 
         $specificBySource = [];
         foreach ($claims as $claim) {
-            if ($claim->predicate !== Claim::PRED_OCR_TEXT) {
+            if (Claim::PRED_OCR_TEXT !== $claim->predicate) {
                 $specificBySource[$claim->source] = true;
             }
         }
 
         $claims = array_values(array_filter(
             $claims,
-            static fn(Claim $claim): bool => $claim->predicate !== Claim::PRED_OCR_TEXT || !isset($specificBySource[$claim->source]),
+            static fn (Claim $claim): bool => Claim::PRED_OCR_TEXT !== $claim->predicate || !isset($specificBySource[$claim->source]),
         ));
 
         usort($claims, static function (Claim $a, Claim $b): int {
             $rank = [
-                'ai:observationProse'      => 4,
-                Claim::PRED_HTR_TEXT       => 3,
-                Claim::PRED_PRINTED_TEXT   => 2,
-                Claim::PRED_OCR_TEXT       => 1,
+                'ai:observationProse' => 4,
+                Claim::PRED_HTR_TEXT => 3,
+                Claim::PRED_PRINTED_TEXT => 2,
+                Claim::PRED_OCR_TEXT => 1,
             ];
             $rankCmp = ($rank[$b->predicate] ?? 0) <=> ($rank[$a->predicate] ?? 0);
-            if ($rankCmp !== 0) {
+            if (0 !== $rankCmp) {
                 return $rankCmp;
             }
             if ($a->confidence !== $b->confidence) {
                 return $b->confidence <=> $a->confidence;
             }
+
             return $b->createdAt <=> $a->createdAt;
         });
 
@@ -77,13 +80,13 @@ final class OcrClaimsPanel
     private function resolve(): array
     {
         $type = $this->subjectType;
-        $id   = $this->subjectId;
+        $id = $this->subjectId;
 
-        if (($type === null || $id === null) && $this->subject !== null) {
+        if ((null === $type || null === $id) && null !== $this->subject) {
             $type ??= strtolower((new \ReflectionClass($this->subject))->getShortName());
-            if ($id === null && method_exists($this->subject, 'getId')) {
+            if (null === $id && method_exists($this->subject, 'getId')) {
                 $id = (string) $this->subject->getId();
-            } elseif ($id === null && property_exists($this->subject, 'id')) {
+            } elseif (null === $id && property_exists($this->subject, 'id')) {
                 $id = (string) $this->subject->id;
             }
         }

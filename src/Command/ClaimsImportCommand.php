@@ -34,8 +34,9 @@ final class ClaimsImportCommand
         #[Option('Skip rows whose claim id already exists.')]
         bool $skipExisting = true,
     ): int {
-        if ($input !== null && !class_exists(JsonlReader::class)) {
+        if (null !== $input && !class_exists(JsonlReader::class)) {
             $io->error("jsonl-bundle is not installed.\n\ncomposer req survos/jsonl-bundle");
+
             return Command::FAILURE;
         }
 
@@ -47,7 +48,7 @@ final class ClaimsImportCommand
         foreach ($this->rows($input) as $row) {
             ++$line;
 
-            if ($scope !== null) {
+            if (null !== $scope) {
                 $row['scope'] = $scope;
             }
 
@@ -55,6 +56,7 @@ final class ClaimsImportCommand
                 $claim = Claim::fromArray($row);
             } catch (\Throwable $e) {
                 $io->error(sprintf('Invalid JSONL row at line %d: %s', $line, $e->getMessage()));
+
                 return Command::FAILURE;
             }
 
@@ -85,7 +87,7 @@ final class ClaimsImportCommand
      */
     private function rows(?string $input): iterable
     {
-        if ($input !== null) {
+        if (null !== $input) {
             foreach (JsonlReader::open($input) as $row) {
                 yield $row;
             }
@@ -95,7 +97,7 @@ final class ClaimsImportCommand
 
         while (($line = fgets(\STDIN)) !== false) {
             $line = trim($line);
-            if ($line === '') {
+            if ('' === $line) {
                 continue;
             }
 

@@ -44,6 +44,7 @@ interface ClaimReaderInterface
      * All claims for the given subjects (media ids), newest first.
      *
      * @param list<string> $subjectIds
+     *
      * @return list<array<string,mixed>>
      */
     public function forSubjects(array $subjectIds, ?string $scope = null): array;
@@ -53,6 +54,7 @@ interface ClaimReaderInterface
      * sources. This is what enrich folds inline into Item/Page records.
      *
      * @param list<string> $subjectIds
+     *
      * @return list<array<string,mixed>>
      */
     public function manifestedForSubjects(array $subjectIds, ?string $scope = null): array;
@@ -61,6 +63,7 @@ interface ClaimReaderInterface
      * Every claim for a whole scope (dataset), ordered newest-first per subject.
      *
      * @param list<string> $excludeSources sources to leave out, e.g. [Claim::SOURCE_IMPORT]
+     *
      * @return list<array<string,mixed>>
      */
     public function forScope(string $scope, array $excludeSources = []): array;
@@ -69,6 +72,7 @@ interface ClaimReaderInterface
      * Every claim_run for a whole scope (dataset).
      *
      * @param list<string> $excludeSources sources to leave out, e.g. [Claim::SOURCE_IMPORT]
+     *
      * @return list<array<string,mixed>>
      */
     public function runsForScope(string $scope, array $excludeSources = []): array;

@@ -26,8 +26,8 @@ final class ClaimAggregator
 
     /**
      * @param list<string> $listPredicates Predicates that aggregate as a list
-     *                                      (e.g. 'dcterms:subject', 'dcterms:spatial',
-     *                                      'ssai:speculation', 'ssai:person').
+     *                                     (e.g. 'dcterms:subject', 'dcterms:spatial',
+     *                                     'ssai:speculation', 'ssai:person').
      */
     public function __construct(
         private readonly ClaimRepository $claims,
@@ -121,15 +121,17 @@ final class ClaimAggregator
             if ($a->confidence !== $b->confidence) {
                 return $b->confidence <=> $a->confidence;
             }
+
             return $b->createdAt <=> $a->createdAt;
         });
 
         $winner = $claims[0];
+
         return [
-            'value'      => $winner->value,
+            'value' => $winner->value,
             'confidence' => $winner->confidence,
-            'basis'      => $winner->basis,
-            'source'     => $winner->source,
+            'basis' => $winner->basis,
+            'source' => $winner->source,
         ];
     }
 
@@ -140,28 +142,28 @@ final class ClaimAggregator
         $byKey = [];
         foreach ($claims as $c) {
             $key = is_scalar($c->value) ? (string) $c->value : json_encode($c->value, JSON_UNESCAPED_UNICODE);
-            if ($key === false) {
+            if (false === $key) {
                 continue;
             }
             if (!isset($byKey[$key]) || $c->confidence > $byKey[$key]['confidence']) {
                 $byKey[$key] = [
-                    'value'      => $c->value,
+                    'value' => $c->value,
                     'confidence' => $c->confidence,
-                    'basis'      => $c->basis,
-                    'source'     => $c->source,
+                    'basis' => $c->basis,
+                    'source' => $c->source,
                 ];
             }
         }
 
         $items = array_values($byKey);
-        usort($items, static fn(array $a, array $b): int => $b['confidence'] <=> $a['confidence']);
+        usort($items, static fn (array $a, array $b): int => $b['confidence'] <=> $a['confidence']);
 
         return [
-            'value'      => array_column($items, 'value'),
+            'value' => array_column($items, 'value'),
             'confidence' => $items[0]['confidence'] ?? 0.0,
-            'basis'      => null,
-            'source'     => 'aggregated',
-            'items'      => $items,
+            'basis' => null,
+            'source' => 'aggregated',
+            'items' => $items,
         ];
     }
 }

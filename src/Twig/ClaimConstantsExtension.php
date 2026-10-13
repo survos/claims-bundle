@@ -22,7 +22,7 @@ final class ClaimConstantsExtension extends AbstractExtension implements Globals
     {
         $globals = [];
         foreach ((new \ReflectionClass(Claim::class))->getConstants(\ReflectionClassConstant::IS_PUBLIC) as $name => $value) {
-            $globals['CLAIM_' . $name] = $value;
+            $globals['CLAIM_'.$name] = $value;
         }
 
         return $globals;

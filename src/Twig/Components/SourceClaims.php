@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Twig\Components;
@@ -29,22 +30,22 @@ final class SourceClaims
 
     /**
      * Core DC fields shown for every content type.
-     * key => [label, display_type]  where display_type is 'text'|'badges'|'url'|'bool'
+     * key => [label, display_type]  where display_type is 'text'|'badges'|'url'|'bool'.
      */
     private const CORE_FIELDS = [
-        'dcterms:title'         => ['Title',       'text'],
-        'dcterms:description'   => ['Description', 'text'],
-        'dcterms:date'          => ['Date',         'text'],
-        'dcterms:creator'       => ['Creator',      'badges'],
-        'dcterms:subject'       => ['Subject',      'badges'],
-        'dcterms:isPartOf'      => ['Collection',   'badges'],
-        'dcterms:publisher'     => ['Institution',  'text'],
-        'dcterms:language'      => ['Language',     'text'],
-        'dcterms:extent'        => ['Extent',       'text'],
-        'dcterms:rights'        => ['Rights',       'text'],
-        'dcterms:license'       => ['License',      'url'],
-        'dcterms:accessRights'  => ['Reuse',        'text'],
-        'dcterms:source'        => ['Source URL',   'url'],
+        'dcterms:title' => ['Title',       'text'],
+        'dcterms:description' => ['Description', 'text'],
+        'dcterms:date' => ['Date',         'text'],
+        'dcterms:creator' => ['Creator',      'badges'],
+        'dcterms:subject' => ['Subject',      'badges'],
+        'dcterms:isPartOf' => ['Collection',   'badges'],
+        'dcterms:publisher' => ['Institution',  'text'],
+        'dcterms:language' => ['Language',     'text'],
+        'dcterms:extent' => ['Extent',       'text'],
+        'dcterms:rights' => ['Rights',       'text'],
+        'dcterms:license' => ['License',      'url'],
+        'dcterms:accessRights' => ['Reuse',        'text'],
+        'dcterms:source' => ['Source URL',   'url'],
     ];
 
     /**
@@ -56,23 +57,23 @@ final class SourceClaims
             'dcterms:format' => ['Process/Technique', 'text'],
         ],
         ContentType::POSTCARD => [
-            'dcterms:format'  => ['Process/Technique', 'text'],
-            'postmark_date'   => ['Postmark',           'text'],
+            'dcterms:format' => ['Process/Technique', 'text'],
+            'postmark_date' => ['Postmark',           'text'],
         ],
         ContentType::NEGATIVE => [
             'dcterms:format' => ['Film Type',  'text'],
         ],
         ContentType::MAP => [
-            'scale'       => ['Scale',       'text'],
-            'projection'  => ['Projection',  'text'],
+            'scale' => ['Scale',       'text'],
+            'projection' => ['Projection',  'text'],
         ],
         ContentType::NEWSPAPER => [
-            'volume'        => ['Volume',  'text'],
-            'issue_number'  => ['Issue',   'text'],
+            'volume' => ['Volume',  'text'],
+            'issue_number' => ['Issue',   'text'],
         ],
         ContentType::PERIODICAL => [
-            'volume'        => ['Volume',  'text'],
-            'issue_number'  => ['Issue',   'text'],
+            'volume' => ['Volume',  'text'],
+            'issue_number' => ['Issue',   'text'],
         ],
         ContentType::MANUSCRIPT => [
             'has_transcription' => ['Transcription', 'bool'],
@@ -81,9 +82,9 @@ final class SourceClaims
             'has_transcription' => ['Transcription', 'bool'],
         ],
         ContentType::OBJECT => [
-            'material'    => ['Material',   'text'],
-            'technique'   => ['Technique',  'text'],
-            'donor'       => ['Donor',      'text'],
+            'material' => ['Material',   'text'],
+            'technique' => ['Technique',  'text'],
+            'donor' => ['Donor',      'text'],
         ],
     ];
 
@@ -115,12 +116,14 @@ final class SourceClaims
     public function contentTypeLabel(): string
     {
         $ct = $this->contentType();
+
         return $ct ? ucfirst($ct) : '';
     }
 
     public function contentTypeUri(): ?string
     {
         $ct = $this->contentType();
+
         return $ct ? ContentType::uri($ct) : null;
     }
 
@@ -130,7 +133,7 @@ final class SourceClaims
      */
     public function fields(): array
     {
-        $ct     = $this->contentType();
+        $ct = $this->contentType();
         $schema = self::CORE_FIELDS;
 
         // Merge type-specific fields
@@ -138,12 +141,12 @@ final class SourceClaims
             $schema = array_merge($schema, self::TYPE_FIELDS[$ct]);
         }
 
-        $rows    = [];
+        $rows = [];
         $handled = array_keys($schema);
 
         foreach ($schema as $key => [$label, $type]) {
             $value = $this->resolve($key);
-            if ($value !== null && $value !== '' && $value !== []) {
+            if (null !== $value && '' !== $value && [] !== $value) {
                 $rows[] = compact('key', 'label', 'type', 'value');
             }
         }
@@ -156,10 +159,12 @@ final class SourceClaims
      */
     public function extraFields(): array
     {
-        if (!$this->showUnknown) return [];
+        if (!$this->showUnknown) {
+            return [];
+        }
 
-        $ct      = $this->contentType();
-        $schema  = self::CORE_FIELDS;
+        $ct = $this->contentType();
+        $schema = self::CORE_FIELDS;
         if ($ct && isset(self::TYPE_FIELDS[$ct])) {
             $schema = array_merge($schema, self::TYPE_FIELDS[$ct]);
         }
@@ -167,26 +172,33 @@ final class SourceClaims
 
         $rows = [];
         foreach ($this->ctx as $key => $value) {
-            if (in_array($key, $handled, true)) continue;
-            if ($value === null || $value === '' || $value === []) continue;
+            if (in_array($key, $handled, true)) {
+                continue;
+            }
+            if (null === $value || '' === $value || [] === $value) {
+                continue;
+            }
             $label = ucwords(str_replace(['dcterms:', 'schema:', '_'], ['', '', ' '], $key));
-            $type  = is_array($value) ? 'badges' : (filter_var($value, FILTER_VALIDATE_URL) ? 'url' : 'text');
+            $type = is_array($value) ? 'badges' : (filter_var($value, FILTER_VALIDATE_URL) ? 'url' : 'text');
             $rows[] = compact('key', 'label', 'type', 'value');
         }
+
         return $rows;
     }
 
     private function resolve(string $key): mixed
     {
         // Primary key
-        if (isset($this->ctx[$key])) return $this->ctx[$key];
+        if (isset($this->ctx[$key])) {
+            return $this->ctx[$key];
+        }
 
         // Legacy aliases
         return match ($key) {
-            'dcterms:rights'       => $this->ctx['rights']       ?? null,
-            'dcterms:license'      => $this->ctx['license_uri']  ?? $this->ctx['license'] ?? null,
+            'dcterms:rights' => $this->ctx['rights'] ?? null,
+            'dcterms:license' => $this->ctx['license_uri'] ?? $this->ctx['license'] ?? null,
             'dcterms:accessRights' => $this->ctx['reuse_allowed'] ?? null,
-            default                => null,
+            default => null,
         };
     }
 }

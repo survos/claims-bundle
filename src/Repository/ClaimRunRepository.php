@@ -27,10 +27,10 @@ final class ClaimRunRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('r')->orderBy('r.createdAt', 'ASC');
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('r.scope = :scope')->setParameter('scope', $scope);
         }
-        if ($subjectType !== null) {
+        if (null !== $subjectType) {
             $qb->andWhere('r.subjectType = :st')->setParameter('st', $subjectType);
         }
 
@@ -51,11 +51,11 @@ final class ClaimRunRepository extends ServiceEntityRepository
             ->andWhere('r.source = :src')->setParameter('src', $source)
             ->orderBy('r.createdAt', 'DESC');
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('r.scope = :scope')->setParameter('scope', $scope);
         }
 
-        /** @var list<ClaimRun> */
+        /* @var list<ClaimRun> */
         return $qb->getQuery()->getResult();
     }
 
@@ -65,12 +65,13 @@ final class ClaimRunRepository extends ServiceEntityRepository
      * Used by ClaimIngestor::recordBatch().
      *
      * @param list<string> $subjectIds
+     *
      * @return array<string, list<ClaimRun>> keyed by subjectId
      */
     public function findForSubjectsAndSource(string $subjectType, array $subjectIds, string $source, ?string $scope = null): array
     {
         $subjectIds = array_values(array_unique($subjectIds));
-        if ($subjectIds === []) {
+        if ([] === $subjectIds) {
             return [];
         }
 
@@ -80,7 +81,7 @@ final class ClaimRunRepository extends ServiceEntityRepository
             ->andWhere('r.source = :src')->setParameter('src', $source)
             ->orderBy('r.createdAt', 'DESC');
 
-        if ($scope !== null) {
+        if (null !== $scope) {
             $qb->andWhere('r.scope = :scope')->setParameter('scope', $scope);
         }
 

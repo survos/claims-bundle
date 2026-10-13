@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Entity;
 
-use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
-use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
 use ApiPlatform\Doctrine\Orm\Filter\ExactFilter;
+use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
 use ApiPlatform\Doctrine\Orm\Filter\PartialSearchFilter;
-use ApiPlatform\Metadata\QueryParameter;
+use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\QueryParameter;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Survos\ClaimsBundle\Repository\ClaimRepository;
+use Survos\FieldBundle\Attribute\EntityMeta;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Uid\Ulid;
-use Survos\FieldBundle\Attribute\EntityMeta;
 
 /**
  * A single machine or human assertion about a subject — the uniform envelope
@@ -39,8 +39,8 @@ use Survos\FieldBundle\Attribute\EntityMeta;
 #[ORM\Entity(repositoryClass: ClaimRepository::class)]
 #[ORM\Table(name: 'claim')]
 #[ORM\Index(fields: ['scope', 'subjectType', 'subjectId', 'predicate'], name: 'idx_claim_scope_subject_pred')]
-#[ORM\Index(fields: ['scope', 'source'],                                 name: 'idx_claim_scope_source')]
-#[ORM\Index(fields: ['runId'],                                           name: 'idx_claim_run')]
+#[ORM\Index(fields: ['scope', 'source'], name: 'idx_claim_scope_source')]
+#[ORM\Index(fields: ['runId'], name: 'idx_claim_run')]
 #[ApiResource(
     operations: [
         new Get(uriTemplate: '/claims/{id}'),
@@ -68,7 +68,7 @@ class Claim
     public const SOURCE_IMPORT = '@import';
 
     public const SUBJECT_IMAGE = 'image';
-    public const SUBJECT_ITEM  = 'item';
+    public const SUBJECT_ITEM = 'item';
 
     // ── Predicates.
     // Standard vocabulary terms stay in their own namespaces (dcterms:, foaf:).
@@ -80,31 +80,31 @@ class Claim
     //
     // Text-type flags drive OCR/HTR routing. They are non-exclusive: a filled
     // pension form carries typedText + handwrittenText + isForm + isFilledForm.
-    public const PRED_HAS_TEXT         = 'ai:hasText';
-    public const PRED_TYPED_TEXT       = 'ai:typedText';
+    public const PRED_HAS_TEXT = 'ai:hasText';
+    public const PRED_TYPED_TEXT = 'ai:typedText';
     public const PRED_HANDWRITTEN_TEXT = 'ai:handwrittenText';
-    public const PRED_IS_FORM          = 'ai:isForm';
-    public const PRED_IS_FILLED_FORM   = 'ai:isFilledForm';
-    public const PRED_OCR_TEXT         = 'ai:ocrText';
-    public const PRED_HTR_TEXT         = 'ai:htrText';
-    public const PRED_PRINTED_TEXT     = 'ai:printedText';
-    public const PRED_SPECULATION      = 'ai:speculation';
-    public const PRED_PIXELS_DONE      = 'ai:pixelsDone';
-    public const PRED_HIGH_RES_GOAL    = 'ai:highResGoal';
-    public const PRED_HIGH_RES_TARGET  = 'ai:highResTarget';
+    public const PRED_IS_FORM = 'ai:isForm';
+    public const PRED_IS_FILLED_FORM = 'ai:isFilledForm';
+    public const PRED_OCR_TEXT = 'ai:ocrText';
+    public const PRED_HTR_TEXT = 'ai:htrText';
+    public const PRED_PRINTED_TEXT = 'ai:printedText';
+    public const PRED_SPECULATION = 'ai:speculation';
+    public const PRED_PIXELS_DONE = 'ai:pixelsDone';
+    public const PRED_HIGH_RES_GOAL = 'ai:highResGoal';
+    public const PRED_HIGH_RES_TARGET = 'ai:highResTarget';
 
     /**
      * Semantically-packed ~400-char summary used by search (e.g. Meili's
      * /chat endpoint). Distinct from dcterms:abstract, which is a human-
      * readable prose summary — denseSummary is tuned for retrieval.
      */
-    public const PRED_DENSE_SUMMARY    = 'ai:denseSummary';
+    public const PRED_DENSE_SUMMARY = 'ai:denseSummary';
 
     /** FOAF standard — a named person. */
-    public const PRED_PERSON           = 'foaf:Person';
+    public const PRED_PERSON = 'foaf:Person';
 
     /** Named organisation, institution, or corporate body. */
-    public const PRED_ORGANISATION     = 'ai:organisation';
+    public const PRED_ORGANISATION = 'ai:organisation';
 
     /**
      * Derive a single, human-describable text-type label from a bag of claims for one subject.
@@ -124,22 +124,31 @@ class Claim
     public static function deriveTextType(iterable $claims): string
     {
         $flags = [
-            self::PRED_HAS_TEXT         => false,
-            self::PRED_TYPED_TEXT       => false,
+            self::PRED_HAS_TEXT => false,
+            self::PRED_TYPED_TEXT => false,
             self::PRED_HANDWRITTEN_TEXT => false,
-            self::PRED_IS_FORM          => false,
-            self::PRED_IS_FILLED_FORM   => false,
+            self::PRED_IS_FORM => false,
+            self::PRED_IS_FILLED_FORM => false,
         ];
         foreach ($claims as $claim) {
-            if (array_key_exists($claim->predicate, $flags) && $claim->value === true) {
+            if (array_key_exists($claim->predicate, $flags) && true === $claim->value) {
                 $flags[$claim->predicate] = true;
             }
         }
 
-        if ($flags[self::PRED_IS_FILLED_FORM] || $flags[self::PRED_IS_FORM]) return 'form';
-        if ($flags[self::PRED_TYPED_TEXT] && $flags[self::PRED_HANDWRITTEN_TEXT]) return 'combo';
-        if ($flags[self::PRED_HANDWRITTEN_TEXT]) return 'handwritten';
-        if ($flags[self::PRED_TYPED_TEXT]) return 'typed';
+        if ($flags[self::PRED_IS_FILLED_FORM] || $flags[self::PRED_IS_FORM]) {
+            return 'form';
+        }
+        if ($flags[self::PRED_TYPED_TEXT] && $flags[self::PRED_HANDWRITTEN_TEXT]) {
+            return 'combo';
+        }
+        if ($flags[self::PRED_HANDWRITTEN_TEXT]) {
+            return 'handwritten';
+        }
+        if ($flags[self::PRED_TYPED_TEXT]) {
+            return 'typed';
+        }
+
         return 'none';
     }
 
@@ -253,7 +262,7 @@ class Claim
         )]
         public private(set) ?string $runId = null,
     ) {
-        $this->id        = (string) new Ulid();
+        $this->id = (string) new Ulid();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -281,7 +290,7 @@ class Claim
     public static function fromArray(array $row): self
     {
         foreach (['subjectType', 'subjectId', 'predicate', 'source'] as $field) {
-            if (!\array_key_exists($field, $row) || !\is_string($row[$field]) || $row[$field] === '') {
+            if (!\array_key_exists($field, $row) || !\is_string($row[$field]) || '' === $row[$field]) {
                 throw new \InvalidArgumentException(sprintf('Claim row is missing required field "%s".', $field));
             }
         }
@@ -298,11 +307,11 @@ class Claim
             runId: isset($row['runId']) && \is_string($row['runId']) ? $row['runId'] : null,
         );
 
-        if (isset($row['id']) && \is_string($row['id']) && $row['id'] !== '') {
+        if (isset($row['id']) && \is_string($row['id']) && '' !== $row['id']) {
             $claim->id = $row['id'];
         }
 
-        if (isset($row['createdAt']) && \is_string($row['createdAt']) && $row['createdAt'] !== '') {
+        if (isset($row['createdAt']) && \is_string($row['createdAt']) && '' !== $row['createdAt']) {
             $claim->createdAt = new \DateTimeImmutable($row['createdAt']);
         }
 

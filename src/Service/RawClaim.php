@@ -29,9 +29,10 @@ namespace Survos\ClaimsBundle\Service;
 final class RawClaim
 {
     public function __construct(
-        public readonly string  $predicate,
-        public readonly mixed   $value,
-        public readonly int     $confidence = 100,
-        public readonly ?string $basis      = null,
-    ) {}
+        public readonly string $predicate,
+        public readonly mixed $value,
+        public readonly int $confidence = 100,
+        public readonly ?string $basis = null,
+    ) {
+    }
 }
