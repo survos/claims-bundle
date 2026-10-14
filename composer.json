@@ -17,6 +17,7 @@
         "survos/data-contracts": "^2.32",
         "survos/field-bundle": "^2.5",
         "survos/jsonl-bundle": "^2.5",
+        "survos/kit-bundle": "^2.36",
         "symfony/framework-bundle": "^8.1",
         "symfony/uid": "^8.1",
         "symfony/console": "^8.1"

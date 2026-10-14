@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Survos\ClaimsBundle;
 
 use Survos\ClaimsBundle\Command\ClaimsExportCommand;
-use Survos\ClaimsBundle\Command\ClaimsFetchCommand;
 use Survos\ClaimsBundle\Command\ClaimsImportCommand;
 use Survos\ClaimsBundle\Command\ClaimsUsageCommand;
 use Survos\ClaimsBundle\Repository\ClaimRepository;
@@ -22,16 +21,19 @@ use Survos\ClaimsBundle\Twig\ClaimFunctionsExtension;
 use Survos\ClaimsBundle\Twig\Components\ClaimsList;
 use Survos\ClaimsBundle\Twig\Components\ClaimsSummary;
 use Survos\ClaimsBundle\Twig\Components\OcrClaimsPanel;
-use Survos\ClaimsBundle\Twig\Components\SourceClaims;
 use Survos\DataContracts\Path\DataPaths;
+use Survos\Kit\AbstractSurvosBundle;
+use Survos\Kit\SurvosKitBundle;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Kernel\RequiredBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
-final class SurvosClaimsBundle extends AbstractBundle
+#[RequiredBundle(SurvosKitBundle::class)]
+// Symfony\Component\HttpKernel\Bundle\Bundle <-- Flex auto-registration marker (see Survos\Kit\AbstractSurvosBundle)
+final class SurvosClaimsBundle extends AbstractSurvosBundle
 {
     public function configure(DefinitionConfigurator $definition): void
     {
@@ -88,8 +90,23 @@ final class SurvosClaimsBundle extends AbstractBundle
             ->end();
     }
 
+    /**
+     * Writer-only classes in the directories kit scans (src/Command, src/Twig/Components). They need
+     * the ORM entities and repositories, which a reader-only consumer does not have.
+     */
+    private const WRITER_ONLY_SCANNED = [
+        ClaimsExportCommand::class,
+        ClaimsImportCommand::class,
+        ClaimsList::class,
+        ClaimsSummary::class,
+        OcrClaimsPanel::class,
+    ];
+
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
+        // Registers src/Command and src/Twig/Components wholesale; writer-only ones are dropped below.
+        parent::loadExtension($config, $container, $builder);
+
         $services = $container->services()
             ->defaults()
                 ->autowire()
@@ -123,7 +140,6 @@ final class SurvosClaimsBundle extends AbstractBundle
         // claims:fetch and dataset:assemble both call it. DataPaths optional (graceful without dataset-bundle).
         $services->set(ClaimsVaultWriter::class)
             ->arg('$dataPaths', service(DataPaths::class)->ignoreOnInvalid());
-        $services->set(ClaimsFetchCommand::class);
 
         // Reader-side like claims:fetch, so it works on reader-only consumers too: it reads
         // claim_run straight off the claims connection rather than through the ORM.
@@ -131,7 +147,6 @@ final class SurvosClaimsBundle extends AbstractBundle
             ->arg('$claimsConnection', service('doctrine.dbal.claims_connection')->ignoreOnInvalid())
             ->arg('$modelRates', $config['model_rates']);
         $services->set(ClaimProjector::class)->autowire()->autoconfigure();
-        $services->set(SourceClaims::class);
         $services->set(ClaimConstantsExtension::class);
         $services->set(ClaimFunctionsExtension::class)->autoconfigure();
 
@@ -154,16 +169,14 @@ final class SurvosClaimsBundle extends AbstractBundle
             }
             $services->set(ClaimAggregator::class)
                 ->arg('$listPredicates', $config['list_predicates']);
-            $services->set(ClaimsExportCommand::class);
-            $services->set(ClaimsImportCommand::class);
-            $services->set(ClaimsList::class);
-            $services->set(ClaimsSummary::class);
-            $services->set(OcrClaimsPanel::class);
-
             if (class_exists(\Survos\TablerBundle\Menu\AbstractAdminMenuSubscriber::class)) {
                 $services->set(Menu\ClaimsMenuSubscriber::class)
                     ->autowire()
                     ->autoconfigure();
+            }
+        } else {
+            foreach (self::WRITER_ONLY_SCANNED as $class) {
+                $builder->removeDefinition($class);
             }
         }
     }
@@ -211,6 +224,10 @@ final class SurvosClaimsBundle extends AbstractBundle
 
     public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
     {
+        // templates/ as @SurvosClaims. The ORM mapping stays hand-wired below: it depends on
+        // reader_only and entity_manager, which HasDoctrineEntities cannot express.
+        parent::prependExtension($container, $builder);
+
         $readerOnly = self::isReaderOnly($builder);
 
         if (!$readerOnly) {
@@ -220,7 +237,7 @@ final class SurvosClaimsBundle extends AbstractBundle
                 'SurvosClaimsBundle' => [
                     'is_bundle' => false,
                     'type' => 'attribute',
-                    'dir' => \dirname(__DIR__).'/src/Entity',
+                    'dir' => $this->bundleRootPath().'/src/Entity',
                     'prefix' => 'Survos\\ClaimsBundle\\Entity',
                     'alias' => 'Claims',
                 ],
@@ -254,12 +271,5 @@ final class SurvosClaimsBundle extends AbstractBundle
                 ],
             ]);
         }
-
-        // Expose bundle templates under @SurvosClaims for component + override.
-        $builder->prependExtensionConfig('twig', [
-            'paths' => [
-                \dirname(__DIR__).'/templates' => 'SurvosClaims',
-            ],
-        ]);
     }
 }
