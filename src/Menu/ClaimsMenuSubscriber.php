@@ -6,9 +6,10 @@ namespace Survos\ClaimsBundle\Menu;
 
 use Survos\ClaimsBundle\Entity\Claim;
 use Survos\ClaimsBundle\Entity\ClaimRun;
-use Survos\TablerBundle\Event\MenuEvent;
+use Survos\MenuBundle\Attribute\AsMenuListener;
+use Survos\MenuBundle\Event\MenuEvent;
+use Survos\MenuBundle\MenuSlot;
 use Survos\TablerBundle\Menu\AbstractAdminMenuSubscriber;
-use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 class ClaimsMenuSubscriber extends AbstractAdminMenuSubscriber
 {
@@ -25,7 +26,7 @@ class ClaimsMenuSubscriber extends AbstractAdminMenuSubscriber
         ];
     }
 
-    #[AsEventListener(event: MenuEvent::ADMIN_NAVBAR_MENU)]
+    #[AsMenuListener(MenuSlot::ADMIN_NAVBAR_MENU)]
     public function onAdminNavbarMenu(MenuEvent $event): void
     {
         $this->buildAdminMenu($event);

@@ -160,7 +160,7 @@ final class SurvosClaimsBundle extends AbstractBundle
             $services->set(ClaimsSummary::class);
             $services->set(OcrClaimsPanel::class);
 
-            if (class_exists(\Survos\TablerBundle\Event\MenuEvent::class)) {
+            if (class_exists(\Survos\TablerBundle\Menu\AbstractAdminMenuSubscriber::class)) {
                 $services->set(Menu\ClaimsMenuSubscriber::class)
                     ->autowire()
                     ->autoconfigure();
