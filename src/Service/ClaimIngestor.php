@@ -252,6 +252,10 @@ final class ClaimIngestor
             $rawClaims,
             static fn (RawClaim $c): bool => !isset($alreadyLogged[self::claimKey($c->predicate, $c->value)]),
         ));
+        // OCR evidence must be a complete snapshot: a reader selects one run's text AND geometry.
+        if (in_array($source, [OcrClaimResolver::TINY, OcrClaimResolver::MISTRAL], true)) {
+            $newClaims = $rawClaims;
+        }
         try {
             if (null !== $sharedWriter) {
                 $this->writeClaimsJsonl($sharedWriter, $scope, $subjectType, $subjectId, $source, $newClaims, $runId);

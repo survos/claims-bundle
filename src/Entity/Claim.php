@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Survos\ClaimsBundle\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\ComparisonFilter;
 use ApiPlatform\Doctrine\Orm\Filter\ExactFilter;
-use ApiPlatform\Doctrine\Orm\Filter\OrderFilter;
 use ApiPlatform\Doctrine\Orm\Filter\PartialSearchFilter;
-use ApiPlatform\Doctrine\Orm\Filter\RangeFilter;
+use ApiPlatform\Doctrine\Orm\Filter\SortFilter;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
@@ -53,8 +53,8 @@ use Symfony\Component\Uid\Ulid;
 #[QueryParameter(key: 'subjectId', property: 'subjectId', filter: new ExactFilter())]
 #[QueryParameter(key: 'predicate', property: 'predicate', filter: new ExactFilter())]
 #[QueryParameter(key: 'source', property: 'source', filter: new PartialSearchFilter(caseSensitive: true))]
-#[QueryParameter(key: 'order[:property]', properties: ['createdAt', 'confidence', 'predicate', 'source'], filter: new OrderFilter())]
-#[QueryParameter(key: 'confidence', property: 'confidence', filter: new RangeFilter())]
+#[QueryParameter(key: 'order[:property]', properties: ['createdAt', 'confidence', 'predicate', 'source'], filter: new SortFilter())]
+#[QueryParameter(key: 'confidence', property: 'confidence', filter: new ComparisonFilter(new ExactFilter()))]
 class Claim
 {
     // ── Subject types.

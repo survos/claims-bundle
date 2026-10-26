@@ -106,6 +106,10 @@ final class ClaimAggregator
                 : $this->projectScalar($claims);
         }
 
+        foreach (OcrClaimResolver::select($rows) as $selection) {
+            $out = array_replace($out, OcrClaimResolver::projection($selection));
+        }
+
         return $out;
     }
 
