@@ -28,8 +28,8 @@ final class ClaimRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('c')
             ->andWhere('c.subjectType = :st')->setParameter('st', $subjectType)
             ->andWhere('c.subjectId = :sid')->setParameter('sid', $subjectId)
-            ->orderBy('c.predicate', 'ASC')
-            ->addOrderBy('c.createdAt', 'ASC');
+            ->orderBy('c.predicate')
+            ->addOrderBy('c.createdAt');
 
         if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
@@ -52,9 +52,9 @@ final class ClaimRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('c')
             ->andWhere('c.subjectType = :st')->setParameter('st', $subjectType)
             ->andWhere('c.scope = :scope')->setParameter('scope', $scope)
-            ->orderBy('c.subjectId', 'ASC')
-            ->addOrderBy('c.predicate', 'ASC')
-            ->addOrderBy('c.createdAt', 'ASC')
+            ->orderBy('c.subjectId')
+            ->addOrderBy('c.predicate')
+            ->addOrderBy('c.createdAt')
             ->getQuery()->getResult();
     }
 
@@ -120,7 +120,7 @@ final class ClaimRepository extends ServiceEntityRepository
         /* @var list<Claim> */
         return $this->createQueryBuilder('c')
             ->andWhere('c.runId = :rid')->setParameter('rid', $runId)
-            ->orderBy('c.predicate', 'ASC')
+            ->orderBy('c.predicate')
             ->getQuery()->getResult();
     }
 
@@ -137,7 +137,7 @@ final class ClaimRepository extends ServiceEntityRepository
             ->andWhere('c.subjectType = :st')->setParameter('st', $subjectType)
             ->andWhere('c.subjectId = :sid')->setParameter('sid', $subjectId)
             ->andWhere('c.predicate = :pred')->setParameter('pred', $predicate)
-            ->orderBy('c.createdAt', 'DESC')
+            ->orderBy('c.createdAt', \SortDirection::Descending)
             ->setMaxResults(1);
 
         if (null !== $scope) {
@@ -154,8 +154,8 @@ final class ClaimRepository extends ServiceEntityRepository
     public function iterateForExport(?string $scope = null, ?string $subjectType = null, ?string $source = null): iterable
     {
         $qb = $this->createQueryBuilder('c')
-            ->orderBy('c.createdAt', 'ASC')
-            ->addOrderBy('c.id', 'ASC');
+            ->orderBy('c.createdAt')
+            ->addOrderBy('c.id');
 
         if (null !== $scope) {
             $qb->andWhere('c.scope = :scope')->setParameter('scope', $scope);
