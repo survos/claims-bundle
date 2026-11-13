@@ -239,7 +239,6 @@ final class SurvosClaimsBundle extends AbstractSurvosBundle
                     'type' => 'attribute',
                     'dir' => $this->bundleRootPath().'/src/Entity',
                     'prefix' => 'Survos\\ClaimsBundle\\Entity',
-                    'alias' => 'Claims',
                 ],
             ];
             // Attach the mapping to the configured EM: the default EM (current behavior) or a named EM
